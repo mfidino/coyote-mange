@@ -1,54 +1,45 @@
 library(dplyr)
 library(lubridate)
+library(exifr)
 
+# read in coyote data
 coy <- read.csv("./data/coyote_mange_data.csv", stringsAsFactors = FALSE)
 
-coy$Mange_signs_present[is.na(coy$Mange_signs_present)] <- 0
-# remove no coyote
-#coy <- coy[-which(coy$Not_coyote==1),]
-
-colnames(coy)  <- gsub("\\.", "_", colnames(coy))
-
-colnames(coy) <- tolower(colnames(coy))
-
-
 # remove some columns
+coy <- coy[,c("species", "time", "new_file_name", "mange_signs_present", "season", "year", "site")]
 
-togo <- c(1,2,  4, 7, 9, 11:14, 16:20)
-
-coy <- coy[,-togo]
-csv_files <- list.files("T:/PEOPLE/Mason Fidino/coyote photos/", ".csv",
+csv_files <- list.files("X:/PEOPLE/Mason Fidino/coyote photos/", ".csv",
                         full.names = TRUE)
 
-wi11 <- list.files("T:/PEOPLE/Mason Fidino/coyote photos/output_WI11", ".JPG",
+# doing something with just the wi11 files
+wi11 <- list.files("X:/PEOPLE/Mason Fidino/coyote photos/output_WI11", ".JPG",
                    full.names = TRUE)
-just_names <- list.files("T:/PEOPLE/Mason Fidino/coyote photos/output_WI11", ".JPG")
 
-hm <- exifr(wi11, exiftoolargs = "-DateTimeOriginal")
-hm$SourceFile <- just_names
+# pull the exif data
+wi11_dt <- read_exif(wi11, tags = "DateTimeDigitized")
 
-hm$DateTimeOriginal <- substr(hm$DateTimeOriginal, 1, 10)
-hm$DateTimeOriginal <- gsub(":", "-",hm$DateTimeOriginal )
-hm$DateTimeOriginal <- ymd(hm$DateTimeOriginal)
+# update names of files to reflect solely the file names instead of paths
+wi11_dt$SourceFile <- list.files("X:/PEOPLE/Mason Fidino/coyote photos/output_WI11", ".JPG")
 
-colnames(hm) <- c("new_file_name", "date")
+wi11_dt$DateTimeDigitized <- substr(wi11_dt$DateTimeDigitized, 1, 10)
+wi11_dt$DateTimeDigitized <- gsub(":", "-",wi11_dt$DateTimeDigitized )
+wi11_dt$DateTimeDigitized <- ymd(wi11_dt$DateTimeDigitized)
 
-
-
+colnames(wi11_dt) <- c("new_file_name", "date")
 
 season_list <- vector("list", length = length(csv_files))
 
 for(i in 1:length(csv_files)){
   my_csv <- read.csv(csv_files[i], stringsAsFactors = FALSE)
   my_csv$date <- mdy(my_csv$date)  
-  season_list[[i]] <- left_join(my_csv[,c(4,6)], coy, by = "new_file_name" )
+  season_list[[i]] <- left_join(my_csv[,c('date', 'new_file_name')], coy, by = "new_file_name" )
 }
 
-season_list[[15]] <- left_join(hm, coy, by = "new_file_name")
+season_list[[15]] <- left_join(wi11_dt, coy, by = "new_file_name")
+
 test <- bind_rows(season_list)
 
-coy <- coy[-which(coy$not_coyote == 1),]
-test <- test[-which(test$not_coyote == 1),]
+
 test <- test[-which(is.na(test$year)),]
 
 coy <- test
@@ -57,16 +48,18 @@ coy$site <- substr(coy$new_file_name, 1, 8)
 
 coy$date <- ymd(coy$date)
 
-new_files <- list.files("T:/PEOPLE/Mason Fidino/coyote photos/mystery_photos/Maureen's edited files/Mystery photos/mystery coyotes", ".JPG|.jpg", full.names = TRUE)
+coy <- coy[,-which(colnames(coy)=="species")]
 
-library(exifr)
+new_files <- list.files("X:/PEOPLE/Mason Fidino/coyote photos/mystery_photos/Maureen's edited files/Mystery photos/mystery coyotes", ".JPG|.jpg", full.names = TRUE)
 
-file_times <- exifr(new_files, exiftoolargs = "-DateTimeOriginal")
 
-file_times$Date <- gsub(":", "/", substr(file_times$DateTimeOriginal, 1 ,10))
+
+file_times <- read_exif(new_files, tags = "DateTimeDigitized")
+
+file_times$Date <- gsub(":", "-", substr(file_times$DateTimeDigitized, 1 ,10))
 file_times$Date <- ymd(file_times$Date)
 
-file_times$Time <- substr(file_times$DateTimeOriginal, 12, 20)
+file_times$Time <- substr(file_times$DateTimeDigitized, 12, 19)
 
 file_sites <- strsplit(file_times$SourceFile, "/")
 file_sites <- sapply(file_sites, function(x) x[length(x)])
@@ -79,11 +72,11 @@ file_to_remove <- which(dt2 %in% dt)
 
 file_times <- file_times[-file_to_remove,]
 
-new_coyote_photos <- read.csv("new_coyote_photos.csv", stringsAsFactors = FALSE)
+new_coyote_photos <- read.csv("./data/new_coyote_photos.csv", stringsAsFactors = FALSE)
 
 # change the source file stuff a bit so it matches
 new_coyote_photos$path <- gsub("\\\\", "/", new_coyote_photos$path )
-new_coyote_photos$path <- gsub("P:", "T:",new_coyote_photos$path )
+new_coyote_photos$path <- gsub("P:", "X:",new_coyote_photos$path )
 
 site_stuff <- strsplit(new_coyote_photos$path, "/")
 site_stuff <- sapply(site_stuff, function(x) x[length(x)])
@@ -108,11 +101,17 @@ colnames(new_coyote_photos) <- tolower(colnames(new_coyote_photos))
 
 colnames(new_coyote_photos)
 
+new_coyote_photos$new_file_name <- sapply(strsplit(new_coyote_photos$path, "/"),
+                                          function(x)x[length(x)] )
+
+
 new_coyote_photos <- new_coyote_photos[,-c(1, 3, 5, 7, 8, 9:10,
                                            12, 13, 14, 15:16)]
-coy <- coy[,-which(colnames(coy)=="species")]
+
 new_coyote_photos <- new_coyote_photos[,colnames(coy)]
 new_coyote_photos$mange_signs_present[is.na(new_coyote_photos$mange_signs_present)] <- 0
+
+
 
 sea <- strsplit(new_coyote_photos$new_file_name, "-")
 sea <- sapply(sea, function(x) x[length(x)])
@@ -142,6 +141,9 @@ p1 <- paste(lol$site, lol$date, lol$time)
 sum(duplicated(p1))
 
 lol <- lol[-which(duplicated(p1)==TRUE),]
+
+lol <- lol[order(lol$new_file_name),]
+
 
 coy <- lol
 colnames(coy)[4] <- "state"
