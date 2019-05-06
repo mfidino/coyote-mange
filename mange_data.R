@@ -1,7 +1,7 @@
 library(dplyr)
 library(lubridate)
 
-coy <- read.csv("coyote_mange_data.csv", stringsAsFactors = FALSE)
+coy <- read.csv("./data/coyote_mange_data.csv", stringsAsFactors = FALSE)
 
 coy$Mange_signs_present[is.na(coy$Mange_signs_present)] <- 0
 # remove no coyote
@@ -369,7 +369,7 @@ library(runjags)
 
 load.module("glm")
 
-mout <- run.jags(model = "new_coyote_mange_model.R",
+mout <- run.jags(model = "./jags_script/new_coyote_mange_model.R",
                  monitor = c("a0", "a", "aseason",
                              "b0", "b", "bseason",
                              "d0", "d", "dseason",
@@ -384,7 +384,7 @@ mout <- run.jags(model = "new_coyote_mange_model.R",
                  summarise = FALSE,
                  plots = FALSE,
                  method = "parallel")
-saveRDS(mout, "coyote_mcmc.RDS")
+saveRDS(mout, "./results/coyote_mcmc.RDS")
 ans <- summary(mout)
 str(ans)
 
