@@ -3,219 +3,66 @@ library(lubridate)
 library(exifr)
 
 # read in coyote data
-coy <- read.csv("./data/coyote_mange_data.csv", stringsAsFactors = FALSE)
+coy <- read.csv("./data/coydata_withdate.csv", stringsAsFactors = FALSE)
 
-# remove some columns
-coy <- coy[,c("species", "time", "new_file_name", "mange_signs_present", "season", "year", "site")]
 
-csv_files <- list.files("X:/PEOPLE/Mason Fidino/coyote photos/", ".csv",
-                        full.names = TRUE)
-
-# doing something with just the wi11 files
-wi11 <- list.files("X:/PEOPLE/Mason Fidino/coyote photos/output_WI11", ".JPG",
-                   full.names = TRUE)
-
-# pull the exif data
-wi11_dt <- read_exif(wi11, tags = "DateTimeDigitized")
-
-# update names of files to reflect solely the file names instead of paths
-wi11_dt$SourceFile <- list.files("X:/PEOPLE/Mason Fidino/coyote photos/output_WI11", ".JPG")
-
-wi11_dt$DateTimeDigitized <- substr(wi11_dt$DateTimeDigitized, 1, 10)
-wi11_dt$DateTimeDigitized <- gsub(":", "-",wi11_dt$DateTimeDigitized )
-wi11_dt$DateTimeDigitized <- ymd(wi11_dt$DateTimeDigitized)
-
-colnames(wi11_dt) <- c("new_file_name", "date")
-
-season_list <- vector("list", length = length(csv_files))
-
-for(i in 1:length(csv_files)){
-  my_csv <- read.csv(csv_files[i], stringsAsFactors = FALSE)
-  my_csv$date <- mdy(my_csv$date)  
-  season_list[[i]] <- left_join(my_csv[,c('date', 'new_file_name')], coy, by = "new_file_name" )
-}
-
-season_list[[15]] <- left_join(wi11_dt, coy, by = "new_file_name")
-
-test <- bind_rows(season_list)
-
-
-test <- test[-which(is.na(test$year)),]
-
-coy <- test
-
-coy$site <- substr(coy$new_file_name, 1, 8)
-
-coy$date <- ymd(coy$date)
-
-coy <- coy[,-which(colnames(coy)=="species")]
-
-new_files <- list.files("X:/PEOPLE/Mason Fidino/coyote photos/mystery_photos/Maureen's edited files/Mystery photos/mystery coyotes", ".JPG|.jpg", full.names = TRUE)
-
-
-
-file_times <- read_exif(new_files, tags = "DateTimeDigitized")
-
-file_times$Date <- gsub(":", "-", substr(file_times$DateTimeDigitized, 1 ,10))
-file_times$Date <- ymd(file_times$Date)
-
-file_times$Time <- substr(file_times$DateTimeDigitized, 12, 19)
-
-file_sites <- strsplit(file_times$SourceFile, "/")
-file_sites <- sapply(file_sites, function(x) x[length(x)])
-file_times$site <- substr(file_sites, 1, 8)
-
-dt <- paste(coy$date, coy$time, sep = "-")
-dt2 <- paste(file_times$Date, file_times$Time, sep = "-")
-
-file_to_remove <- which(dt2 %in% dt)
-
-file_times <- file_times[-file_to_remove,]
-
-new_coyote_photos <- read.csv("./data/new_coyote_photos.csv", stringsAsFactors = FALSE)
-
-# change the source file stuff a bit so it matches
-new_coyote_photos$path <- gsub("\\\\", "/", new_coyote_photos$path )
-new_coyote_photos$path <- gsub("P:", "X:",new_coyote_photos$path )
-
-site_stuff <- strsplit(new_coyote_photos$path, "/")
-site_stuff <- sapply(site_stuff, function(x) x[length(x)])
-new_coyote_photos$Site <- substr(site_stuff, 1, 8)
-
-# only keep those in file times
-new_coyote_photos <- new_coyote_photos[which(new_coyote_photos$path %in% 
-                                               file_times$SourceFile), ]
-new_coyote_photos <- new_coyote_photos[order(new_coyote_photos$path),]
-file_times <- file_times[order(file_times$SourceFile),]
-
-
-new_coyote_photos$date <- file_times$Date
-new_coyote_photos$time <- file_times$Time
-# remove not coyote
-new_coyote_photos <- new_coyote_photos[- which(new_coyote_photos$Not_coyote == 1),]
-
-colnames(new_coyote_photos)  <- gsub("\\.", "_", colnames(new_coyote_photos))
-
-colnames(new_coyote_photos) <- tolower(colnames(new_coyote_photos))
-
-
-colnames(new_coyote_photos)
-
-new_coyote_photos$new_file_name <- sapply(strsplit(new_coyote_photos$path, "/"),
-                                          function(x)x[length(x)] )
-
-
-new_coyote_photos <- new_coyote_photos[,-c(1, 3, 5, 7, 8, 9:10,
-                                           12, 13, 14, 15:16)]
-
-new_coyote_photos <- new_coyote_photos[,colnames(coy)]
-new_coyote_photos$mange_signs_present[is.na(new_coyote_photos$mange_signs_present)] <- 0
-
-
-
-sea <- strsplit(new_coyote_photos$new_file_name, "-")
-sea <- sapply(sea, function(x) x[length(x)])
-surid <- substr(sea, 1, 4)
-
-new_coyote_photos$SurveyID <- paste(new_coyote_photos$site, surid, sep = "-")
-
-coy$SurveyID <- paste0(substr(coy$new_file_name,1, 9 ), 
-                       toupper(substr(coy$season, 1, 2)),
-                       substr(coy$year, 3, 4))
-
-p1 <- paste(coy$site, coy$date, coy$time)
-p2 <- paste(new_coyote_photos$site,new_coyote_photos$date, new_coyote_photos$time )
-
-which(p1 %in% p2)
-which(p2 %in% p1)
-coy$site <- substr(coy$SurveyID, 1, 8)
-
-
-
-coy <- coy[-which(duplicated(coy)== TRUE),]
-
-lol <- rbind(coy, new_coyote_photos)
-
-p1 <- paste(lol$site, lol$date, lol$time)
-
-sum(duplicated(p1))
-
-lol <- lol[-which(duplicated(p1)==TRUE),]
-
-lol <- lol[order(lol$new_file_name),]
-
-
-coy <- lol
-colnames(coy)[4] <- "state"
-
-
-
-
-to_combine <- read.table("./../Transect/sites_to_merge_sp_13.txt", header = TRUE, sep = "\t")
-
-o1 <- to_combine[to_combine$group==1,]
-o1$site_no_number <- paste0(o1$site_no_number, "0")
-
-for(i in 1:nrow(o1)){
-  if(any(coy$site == o1$Site[i])){
-  coy$SurveyID[coy$site == o1$Site[i]] <- 
-    paste0(o1$site_no_number[i], "-", substr(coy$SurveyID[coy$site == o1$Site[i]], 10,13))
-  }
-}
-coy$site <- substr(coy$SurveyID, 1, 8)
-
-coy_daily <- coy %>% group_by(SurveyID, date) %>% 
-  summarise(state = as.numeric(sum(state)>0))
+# get whether or not mange was detected during each surveyID
+mange_per_survey <- coy %>% 
+  group_by(surveyid) %>% 
+  summarise(mange = max(Mange_signs_present))
 
 # bring in master data
+master <- read.csv("./data/coyote_detection_data.csv", stringsAsFactors = FALSE)
 
-master <- read.csv("coyote_detection_data.csv", stringsAsFactors = FALSE)
-
-master$joiny <- paste(master$SurveyID, master$Date, sep = "-")
-coy_daily$joiny <- paste(coy_daily$SurveyID, coy_daily$date, sep = "-")
-
-sid <- substr(coy$SurveyID, 10,13)
-
-cheeky <- which(sid %in% c("SU13", "FA13"))
-
-lj <- left_join(master, coy_daily[,c(3:4)], by = "joiny")
+# add mange detections to the master
+master <- left_join(master, mange_per_survey, by = c("SurveyID" = "surveyid"))
 
 # remove bmt0
-lj <- lj[-which(lj$StationID == "D02-BMT0"),]
+master <- master[-which(master$StationID == "D02-BMT0"),]
+# drop duplicates
+master <- master[-which(duplicated(master)==TRUE),]
 
-lj <- lj[-which(duplicated(lj)==TRUE),]
+# make a column to indicate the state of the detection
+master$state <- NA
+# for any time when camera is operable put state 1
+#  this indicates that coyote were not detected
+master$state[!is.na(master$Coyote)] <- 1
+# for any time when a coyote was detected put state 2
+#  this indicates that a coyote was detected
+master$state[which(master$Coyote == 1)] <- 2
+# for any time when mange was detected put state 3
+#  this indicates that a coyote with mange was detected
+master$state[which(master$mange == 1)] <- 3
+# return NA values when Coyote = NA
+master$state[which(is.na(master$Coyote))] <- NA
 
-hm <- rle(lj$SurveyID)
+# start condensing down to weekly detections
+#  step 1: put a -1 in this column if camera not operational
+master$weekly <- is.na(master$state) * 0 + -1
+#  step 2: put the state column in when there is data
+master$weekly[-which(is.na(master$state))] <- master$state[-which(is.na(master$state))]
 
-table(lj$state[is.na(lj$Coyote)])
-
-lj$Coyote[!is.na(lj$state)] <- 1
-lj$state[lj$Coyote== 1 & is.na(lj$state)]
-
-to_1 <- which(lj$Coyote == 1 & is.na(lj$state) == TRUE)
-
-#lj$state[to_1] <- 0
-
-
-lj$state[lj$state==1] <- 2
-lj$state[lj$state==0] <- 1
-lj$state[lj$Coyote == 0] <- 0
-
-lj$weekly <- is.na(lj$state) * 0 + -1
-lj$weekly[-is.na(lj$state)] <- lj$state[-is.na(lj$state)]
-
-longshot <- lj %>% group_by(SurveyID, Week) %>% 
+# summarise down to weekly detections
+master_week <- master %>% group_by(SurveyID, Week) %>% 
   summarise(state = max(weekly), station = unique(StationID))
 
+# need to order this by season / year. This generates the appropriate vector
+#  to sort by
 twenty_years_of_data <- paste(c("WI", "SP", "SU", "FA"), 
                               rep(seq(10,30,1), each = 4), 
                               sep = "" )
-longshot$season <- factor(substr(longshot$SurveyID, 10,13), levels = twenty_years_of_data)
+# add a season column to master week, giving it levels equal to the correct season/year order.
+master_week$season <- factor(substr(master_week$SurveyID, 10,13), levels = twenty_years_of_data)
 
-  longshot <- longshot[order(longshot$station, longshot$season),]
+# order by season column
+master_week <- master_week[order(master_week$station, master_week$season),]
 
-week_mat <- array(longshot$state, dim = c(4, 13, 122))
-site_mat <- array(longshot$station, dim = c(4, 13, 122))
+# put an NA in place when state is -1
+master_week$state[master_week$state == -1] <- NA
+
+# set up arrays for analysis
+week_mat <- array(master_week$state, dim = c(4, 13, 122))
+site_mat <- array(master_week$station, dim = c(4, 13, 122))
 
 # remove sites that have less than 2 seasons of data
 togo <- rep(0, 122)
@@ -227,24 +74,16 @@ togo[i] <- ifelse(sum(na_seas==4) >11, i, 0)
 week_mat <- week_mat[,,-togo[togo>0] ]
 sites <- unique(as.character(site_mat[,,which(togo==0)]))
 
-# make the detection covariates
-
-prop_clear <- coy[coy$site %in% sites,]
-
-prop_clear <- prop_clear %>% group_by(SurveyID) %>% 
-  summarise(a = sum(clear_photo)+1,
-            b = length(clear_photo) - sum(clear_photo) + 1) %>% 
-  group_by(SurveyID) %>% 
-  summarise(mu = a / (a + b),
-            sigma = (a * b) / ((a + b)^2 * (a + b + 1)))
-prop_clear$inx <- prop_clear$mu * prop_clear$sigma
-
-scale_covs <-list()
-scaled_prop <- scale(prop_clear[,c("mu", "sigma", "inx")])
-prop_clear[,c("mu", "sigma", "inx")] <- data.frame(scaled_prop)
-scale_covs$scaled_prop <- scaled_prop
+# get maximum state for z initial values
+z_start <- apply(week_mat, c(3,2), max, na.rm = TRUE)
+z_start[is.infinite(z_start)] <- NA
 
 # set this up in a matrix for the detection model
+#  step 1. sort by site and season
+coy$season <- substr(coy$surveyid, 10,13)
+coy$season <- factor(coy$season, levels = twenty_years_of_data)
+coy <- coy[order(coy$season, coy$site),]
+
 
 detect_covs <- left_join(longshot, prop_clear, by = "SurveyID")
 detect_covs[is.na(detect_covs)] <- 0
