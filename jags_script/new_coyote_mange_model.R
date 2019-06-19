@@ -88,31 +88,42 @@ model{
 #
   for(site in 1:nsite){
     for(yr in 1:nyear){
-    # linear predictor for each detectable state set up as a set
-    # of conditional binomials
+    # linear predictor for probability of detecting a coyote per week
     pr_coyote[site, yr] <- ilogit( d0 + inprod(d, dcovs[site, ]) + 
                                     dseason[ sea_vec[yr] ] )
-    pr_mangy_coyote[site, yr] <- ilogit( f0 + inprod(f, fcovs[site, yr, ]) +
-                                         fseason[ sea_vec[yr] ] )
+    for(week in 1:nweek){
       # TS = no coyote = 1
-      lambda[site, yr, 1, 1] <- 1 # OS = no coyote
-      lambda[site, yr, 2, 1] <- 0 # OS = coyote w/o mange (not possible | TS)
-      lambda[site, yr, 3, 1] <- 0 # OS = coyote w/ mange  (not possible | TS)
+      lambda[site, yr, week, 1, 1] <- 1 # OS = no coyote
+      lambda[site, yr, week, 2, 1] <- 0 # OS = coyote w/o mange (not possible | TS)
+      lambda[site, yr, week, 3, 1] <- 0 # OS = coyote w/ mange  (not possible | TS)
       # TS = coyote w/o mange = 2
-      lambda[site, yr, 1, 2] <- 1 - pr_coyote[site, yr]
-      lambda[site, yr, 2, 2] <- pr_coyote[site, yr]
-      lambda[site, yr, 3, 2] <- 0 # OS = coyote w/ mange (not possible | TS)
+      lambda[site, yr, week, 1, 2] <- 1 - pr_coyote[site, yr]
+      lambda[site, yr, week, 2, 2] <- pr_coyote[site, yr]
+      lambda[site, yr, week, 3, 2] <- 0 # OS = coyote w/ mange (not possible | TS)
       # TS = coyote w/ mange = 3
-      lambda[site, yr, 1, 3] <- 1 - pr_coyote[site, yr]
-      lambda[site, yr, 2, 3] <- pr_coyote[site, yr] * 
-                               (1 - pr_mangy_coyote[site, yr])
-      lambda[site, yr, 3, 3] <- pr_coyote[site, yr] * 
-                                pr_mangy_coyote[site, yr]
+      lambda[site, yr, week, 1, 3] <- 1 - pr_coyote[site, yr]
+      lambda[site, yr, week, 2, 3] <- pr_coyote[site, yr] * 
+                                        (1 - pr_mangy_coyote[site, yr, week])
+      lambda[site, yr, week, 3, 3] <- pr_coyote[site, yr] * 
+                                        pr_mangy_coyote[site, yr, week]
+    }
     }
   }
 # lambda tpm - CLOSE
 # lambda tpm - CLOSE
 # lambda tpm - CLOSE
+#
+# Detection sub-model of mange per image at site and season - OPEN
+# Detection sub-model of mange per image at site and season - OPEN
+# Detection sub-model of mange per image at site and season - OPEN
+for(photo in 1:nphoto){
+  logit(mange_mu[photo]) <- f0 + inprod(f, mange_covs[photo,])
+  mange_signs_present[photo] ~ dbern(mange_mu[photo])
+}
+# Detection sub-model of mange per image at site and season - CLOSE
+# Detection sub-model of mange per image at site and season - CLOSE
+# Detection sub-model of mange per image at site and season - CLOSE
+#  
 #
 # priors - OPEN
 # priors - OPEN  
