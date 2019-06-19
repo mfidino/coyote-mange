@@ -124,3 +124,39 @@ m1 <- run.jags("conditional_model.R",
                modules = 'glm',
                method = 'parallel'
               )
+
+caterplot(m1, regex = "psi|rho|gam|ome", reorder = FALSE)
+my_pars <- c(0.5, -1, -0.5, 0.5, -0.5, 0.5, -0.5, 0.25, 0.7)
+points( rev(1:9) ~ my_pars, pch = 19)
+
+mm <- as.matrix(as.mcmc.list(m1), chains = TRUE)
+
+
+# calculate coyote without mange
+newx <- cbind(1,seq(-3,3, 0.01))
+
+psi <- mm[,2:3]
+omega <- mm[,6:7]
+
+psi_pred <- plogis(psi %*% t(newx))
+omega_pred <- plogis(omega %*% t(newx))
+
+c_nomange <- psi_pred * (1 - omega_pred)
+c_mange <- psi_pred * omega_pred
+
+c_nomange <- t(apply(c_nomange, 2, quantile, probs = c(0.025,0.5,0.975)))
+c_mange <- t(apply(c_mange, 2, quantile, probs = c(0.025,0.5,0.975)))
+
+plot(c_nomange[,2] ~ newx[,2], xlab = "environmental covariate",
+     ylab = "probability of", ylim = c(0,1), type = 'l', bty = 'l',
+     lwd = 2)
+lines(c_nomange[,1] ~ newx[,2], lty = 2)
+lines(c_nomange[,3] ~ newx[,2], lty = 2)
+
+lines(c_mange[,2] ~ newx[,2], col = "red", lwd = 2)
+lines(c_mange[,1] ~ newx[,2], col = "red", lty = 2)
+lines(c_mange[,3] ~ newx[,2], col = "red", lty = 2)
+
+legend('topright', legend = c('Coyote without mange',
+                              'Coyote with mange'),
+       col = c('black', 'red'), lwd = 2)
