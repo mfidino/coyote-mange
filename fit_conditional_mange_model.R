@@ -121,7 +121,9 @@ master_week$Coyote[master_week$Coyote == -1] <- NA
 #  to sort by
 twenty_years_of_data <- paste(c("WI", "SP", "SU", "FA"), 
                               rep(seq(10,30,1), each = 4), 
-                              sep = "" )
+                              sep = "" )[2:14]
+
+
 # add a season column to master week, giving it levels equal to the correct season/year order.
 master_week$season <- factor(substr(master_week$SurveyID, 10,13), levels = twenty_years_of_data)
 
@@ -157,6 +159,7 @@ site_mat <- site_mat[,,-togo[togo>0] ]
 sites <- unique(as.character(site_mat))
 
 y_det <- y_det[which(y_det$station %in% sites),]
+y_det$station <- factor(y_det$station, levels = sites)
 
 z_start <- y_det$y
 z_start[z_start>1] <- 1
@@ -174,7 +177,6 @@ coy <- coy[order(coy$season, coy$site),]
 
 # drop data that has been excluded from occupancy analysis
 coy <- coy[-which(!coy$site %in% sites),]
-coydet <- coy
 
 
 coy$site <- factor(coy$site, levels = sites)
@@ -185,192 +187,102 @@ coy <- coy[order( coy$season, coy$site),]
 
 coydet <- coy
 
+coy$sitevec <- as.numeric(factor(coy$surveyid, levels = y_det$SurveyID))
 
-coy_summary <- coydet %>% group_by(site, season, Week) %>% 
-  summarise(n_photo = length(new_file_name))
+y_det$sampvec <- as.numeric(y_det$season)
+y_det$fall <- 0
+y_det$fall[grep('FA', y_det$season)] <- 1
+y_det$winter <- 0
+y_det$winter[grep('WI', y_det$season)] <- 1
 
-coy_summary$has_photo <- 1
-
-# the vectors that indicate where the photos are:
-coy_summary$min <- 0
-coy_summary$max <- 0
-coy_summary$min[1] <- 1
-coy_summary$max[1] <- 11
-for(i in 2:nrow(coy_summary)){
-  coy_summary$min[i] <- coy_summary$max[i-1] +1
-  coy_summary$max[i] <- coy_summary$min[i] + (coy_summary$n_photo[i] - 1)
-}
-colnames(coy_summary) <- tolower(colnames(coy_summary))
-
-test <- expand.grid(site = sites, season = unique(master_week$season),
-                    week = unique(master_week$Week))
-test <- test[order(test$site, test$season, test$week),]
-
-hm <- left_join(test, coy_summary, by = c('site', 'season', 'week'))
-hm$has_photo[is.na(hm$has_photo)] <- 0
-hm$min[is.na(hm$min)] <- 1
-hm$max[is.na(hm$max)] <- 1
-
-hm <- hm[order( hm$site,hm$season),]
+# make a vector to track each season occupancy
+season_tracker <- matrix(0, ncol = 2, nrow = 13)
+season_tracker[,1] <- seq(1, 1339, 103)
+season_tracker[,2] <- seq(103, nrow(y_det), 103)
 
 
-coydet$site <- as.numeric(coydet$site)
-coydet$season <- as.numeric(coydet$season)
-coydet$Week <- as.numeric(coydet$Week)
+# CONSTRUCT COVARIATES
+coy$num_sev <- as.numeric(factor(coy$severity,
+                                 levels = c('None',
+                                            'Mild',
+                                            'Moderate',
+                                            'Severe'))) - 1 
 
-hp <- array(hm$has_photo, dim = dim(site_mat))
-hp[is.na(hp)] <- 0
-mmin <- array(hm$min, dim = dim(site_mat))
-mmin[is.na(mmin)] <- 1
-mmax <- array(hm$max, dim = dim(site_mat))
-mmax[is.na(mmax)] <- 1
-
-mange_covs <- coy[,c('blur', 'In_color', 'Season','propbodyvis')]
-mange_covs$Season[mange_covs$Season!='Winter'] <- 0
-mange_covs$Season[mange_covs$Season=='Winter'] <- 1
-mange_covs$Season <- as.numeric(mange_covs$Season)
-
-to_1 <- which(mange_covs$blur>=500)
-mange_covs$blur[to_1] <- 1
-mange_covs$blur[-to_1] <- 0
-mange_covs$propbodyvis <- scale(mange_covs$propbodyvis)
+#mange detection
+gamma_covs <- coy[,c('blur', 'In_color','propbodyvis', 'num_sev')]
 
 
+to_1 <- which(gamma_covs$blur>=500)
+gamma_covs$blur[to_1] <- 1
+gamma_covs$blur[-to_1] <- 0
+gamma_covs$propbodyvis <- scale(gamma_covs$propbodyvis)
+gamma_covs <- cbind(1, gamma_covs)
 
-# toy_list <- list(mange_signs_present = coy$Mange_signs_present,
-#                  mange_covs = as.matrix(mange_covs),
-#                  mmin = mmin,
-#                  mmax = mmax,
-#                  hp = hp,
-#                  nsite = 103,
-#                  nyear = 13,
-#                  nweek = 4,
-#                  I = ncol(mange_covs),
-#                  nphoto = nrow(coy))
-# 
-# library(runjags)
-# 
-# mout <- run.jags(model = "./jags_script/test_binomial.R",
-#                  monitor = c(
-#                              "f0", "f"),#,'mange_mu', 'pr_mangy_coyote'),
-#                  data = toy_list,
-#                  n.chains = 1,
-#                  adapt = 10000,
-#                  burnin = 10000,
-#                  sample = 20000,
-#                  thin = 1,
-#                  summarise = FALSE,
-#                  plots = FALSE,
-#                  method = 'parallel')
-# 
-# hey <- as.matrix(as.mcmc.list(mout), chains = TRUE)
-# 
-# summary(mout, vars = 'f')
-# 
-# mmu <- hey[,grep('mu', colnames(hey))]
-# mco <- hey[,grep('coyote', colnames(hey))]
-# colnames(mco)[113]
-# mco[,113]
-# 
-# detect_covs <- left_join(longshot, prop_clear, by = "SurveyID")
-# detect_covs[is.na(detect_covs)] <- 0
-
-#detect_covs <- detect_covs[-which(duplicated(detect_covs$SurveyID)==TRUE),]
-#mu_mat <- t(matrix(detect_covs$mu, nrow = 13, ncol =  122)[,-togo[togo>0]])
-#sigma_mat <- t(matrix(detect_covs$sigma, nrow = 13, ncol =  122)[,-togo[togo>0]])
-#inx_mat <- t(matrix(detect_covs$inx, nrow = 13, ncol =  122)[,-togo[togo>0]])
-
-# bring in n photos of canids
-
-#canid_photo <- read.csv("n_photo_canids.csv", stringsAsFactors = FALSE)
-
-#canid_photo <- canid_photo %>% group_by(SurveyID) %>% 
-#  summarise(canids = sum(mammals, na.rm = TRUE))
-#scaled_canid <- scale(canid_photo$canids)
-#canid_photo$canids <- scaled_canid
-#scale_covs$scaled_canids <- scaled_canid
-
-#canid <- left_join(longshot, canid_photo, by = "SurveyID")
-
-#canid <- canid[-which(duplicated(canid$SurveyID) == TRUE),]
-#canid_mat <- t(matrix(canid$canids, nrow = 13, ncol = 122)[,-togo[togo>0]])
-#canid_mat[is.na(canid_mat)] <- 0
 
 # bring in urbanization data
 urb <- read.csv("./data/raw_covariate_data.csv")
 urb <- urb[which(urb$site %in% sites),]
 
-urb <- prcomp(urb[,-1], scale. = TRUE)
+urb$site <- factor(urb$site, levels = sites)
 
 
-urb_mat <- as.matrix(urb$x[,1]) * -1
-
-#library(runjags)
-#library(rjags)
-
-week_mat <- aperm(week_mat, c(3,2,1))
-mmin <- aperm(mmin, c(3,2,1))
-mmax <- aperm(mmax, c(3,2,1))
-hp <- aperm(hp, c(3,2,1))
-
-#mmin <- mmin[-togo[togo>0],,]
-#mmax <- mmax[-togo[togo>0],,]
-#hp <- hp[-togo[togo>0],,]
+urb_cov <- prcomp(urb[,-1], scale. = TRUE)
 
 
-acovs <- bcovs <- matrix(urb_mat)
+urb_mat <- data.frame( site = urb$site,
+                       urb = as.numeric(urb_cov$x[,1]) * -1)
 
-#bcovs <- array(NA, dim = c(103,13,2))
+# merge with y_det
+y_det <- left_join(y_det, urb_mat, by = c('station' = 'site'))
 
-#bcovs[,,1] <- array(urb_mat, dim = c(103, 13))
-#bcovs[,,2] <- canid_mat
 
-dcovs <- acovs
+temps <- data.frame(season = levels(y_det$season),
+                    temp = c(    47, 70, 48, 
+                             18, 42, 72, 47,
+                             23, 43, 74, 45,
+                             20, 39 ))
+temps$temp <- as.numeric(scale(temps$temp))
 
-#fcovs <- array(NA, dim = c(102,13,4))
+# merge with y_det
+y_det <- left_join(y_det, temps, by = 'season')
 
-#fcovs[,,1] <- mu_mat
-#fcovs[,,2] <- sigma_mat
-#fcovs[,,3] <- inx_mat
-#fcovs[,,4] <- urb_mat
 
-sea_vec <- substr(as.character(unique(master_week$season)), 1,2)
-sea_vec <- factor(sea_vec, levels = c("SP", "SU", "FA", "WI"))
-sea_vec <- as.numeric(sea_vec)
+psi_covs <- cbind(1, y_det[,c('urb', 'fall')])
 
-#year_vec <- as.character(unique(longshot$season))                  
-#year_vec <- factor(substr(year_vec, 3, 4))
-#year_vec <- as.numeric(year_vec)
+rho_covs <- cbind(1, y_det[,c('temp')])
 
-# make inits for model
+omega_covs <- cbind(1, y_det[, c('urb', 'winter')])
 
-#z <- matrix(NA, nrow = 102, ncol = 13)
+ncov_psi <- ncol(psi_covs)
+ncov_rho <- ncol(rho_covs)
+ncov_omega <- ncol(omega_covs)
+ncov_gamma <- ncol(gamma_covs)
+nseason <- max(y_det$sampvec)
 
-#for(i in 1:102){
-#  for(j in 1:13){
-#  z[i,j] <- max(week_mat[i,j,], na.rm = TRUE)
-#  }
-#}
-#z[is.infinite(z)]  <- 0
-#z <- z+1
+
+
 z <- z_start
 #z[is.na(z)] <- 1
+
+x_guess <- rep(NA, nrow(y_det)) 
+x_guess[unique(coy$sitevec[coy$Mange_signs_present == 1])] <- 1
+
+
 inits <- function(chain){
   gen_list <- function(chain = chain){
     list( 
-      z = as.matrix(z),
-      a0 = rnorm(1,-2),
-      a = rnorm(1,-2),
-      aseasonpar = rnorm(3,-2),
-      b0 = rnorm(1,-2),
-      b = rnorm(1,-2),
-      bseasonpar = rnorm(3,-2),
-      d0 = rnorm(1,-2),
-      d = rnorm(1,-2),
-      dseasonpar = rnorm(3,-2),
-      f0 = rnorm(1,-5),
-      f = rnorm(4,-1),
-      fseasonpar = rnorm(3,-2),
+      z = as.numeric(z),
+      x = x_guess,
+      psi = rnorm(ncov_psi),
+      rho = rnorm(ncov_rho),
+      omega = rnorm(ncov_omega),
+      gamma = rnorm(ncov_gamma),
+      psi_ranef = rnorm(nseason),
+      rho_ranef = rnorm(nseason),
+      omega_ranef = rnorm(nseason),
+      tau_psi = rgamma(1,1,1),
+      tau_rho = rgamma(1,1,1),
+      tau_omega = rgamma(1,1,1),
       .RNG.name = switch(chain,
                          "1" = "base::Wichmann-Hill",
                          "2" = "base::Marsaglia-Multicarry",
@@ -396,53 +308,56 @@ inits <- function(chain){
   )
 }
 
-#week_mat[!is.na(week_mat)] <- week_mat[!is.na(week_mat)] + 1
 
 
-#toy_list <- list(mange_signs_present = coy$Mange_signs_present,
-#                 mange_covs = as.matrix(mange_covs),
-#                 mmin = mmin,
-#                 mmax = mmax,
-#                 hp = hp,
-#                 nsite = 103,
-#                 nyear = 13,
-#                 nweek = 4,
-#                 I = ncol(mange_covs),
-#                 nphoto = nrow(coy))
+data_list <- list( y = y_det$y,
+                   J = y_det$J,
+                   q = coy$Mange_signs_present,
+                   psi_cov = as.matrix(psi_covs),
+                   rho_cov = as.matrix(rho_covs),
+                   omega_cov = as.matrix(omega_covs),
+                   gamma_cov = as.matrix(gamma_covs),
+                   ncov_psi = ncov_psi,
+                   ncov_rho = ncov_rho,
+                   ncov_omega = ncov_omega,
+                   ncov_gamma = ncov_gamma,
+                   nseason = nseason,
+                   st = season_tracker,
+                   nsite = nrow(y_det),
+                   nphoto = nrow(coy),
+                   sample_vec = y_det$sampvec,
+                   site_vec = coy$sitevec)
 
-data_list <- list( y = week_mat, acovs = acovs, bcovs = bcovs, dcovs = dcovs, 
-                   gcovs = acovs,
-            sea_vec = sea_vec,
-           nyear = 13, nsite = 103, nsurvey = 4, nstate = 3,
-           mange_signs_present = coy$Mange_signs_present,
-           mange_covs = as.matrix(mange_covs),
-           mmin = mmin,
-           mmax = mmax,
-           hp = hp,
-           nphoto = nrow(coy),
-           nweek=4)
 
-library(rjags)
 library(runjags)
 
-load.module("glm")
 
-mout <- run.jags(model = "./jags_script/coyote_mange_model_with_images_intercept.R",
-                 monitor = c("a0", "a", "aseason",
-                             "b0", "b", "bseason",
-                             "d0", "d", "dseason",
-                             "f0", "f", "fseason",
-                             'g0', 'g'),
+start <- Sys.time()
+mout <- run.jags(model = "./jags_script/conditional_model.R",
+                 monitor = c('psi',
+                             'rho',
+                             'omega',
+                             'gamma',
+                             'sd_psi',
+                             'sd_rho',
+                             'sd_omega',
+                             'sd_gamma',
+                             'psi_ranef',
+                             'rho_ranef',
+                             'omega_ranef',
+                             'n_coyote',
+                             'n_mange'),
                  data = data_list,
-                 n.chains = 7,
+                 n.chains = 4,
                  inits = inits,
                  adapt = 1000,
                  burnin = 40000,
-                 sample = ceiling(100000/7),
-                 thin = 3,
-                 summarise = FALSE,
-                 plots = FALSE,
-                 method = "parallel")
+                 sample = ceiling(50000/4),
+                 thin = 2,
+                 module = 'glm',
+                 method = 'parallel')
+end <- Sys.time()
+end - start
 
 m2 <- as.mcmc.list(mout)
 saveRDS(mout, "./results/coyote_mcmc_images.RDS")
