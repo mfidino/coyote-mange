@@ -35,14 +35,14 @@ coy <- coy[-grep('SU13', coy$surveyid),]
 master <- read.csv("./data/coyote_detection_data.csv", stringsAsFactors = FALSE)
 master$SurveyID <- gsub("S03-LPC(.*)", "S03-LCP\\1", master$SurveyID)
 
-su13 <- read.csv("./data/false_su13.csv", stringsAsFactors = FALSE)
+ms13 <- read.csv("./data/su13_master.csv", stringsAsFactors = FALSE)
 mf13 <- read.csv("./data/fa13_master.csv", stringsAsFactors = FALSE)
 mw14 <- read.csv("./data/wi14_master.csv", stringsAsFactors = FALSE)
 
 
 # create a bunk su13
 
-master <- rbind(master, su13, mf13, mw14)
+master <- rbind(master, ms13, mf13, mw14)
 # add week to the coy data
 #  this will drop images that fall outside of our sampling period
 coy <- inner_join(coy, master[,c('SurveyID', 'Week', 'Date')],
