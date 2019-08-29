@@ -1,7 +1,6 @@
 library(dplyr)
 library(lubridate)
 library(exifr)
-
 library(runjags)
 
 
@@ -28,7 +27,7 @@ for(i in 1:nrow(o1)){
 coy$site <- substr(coy$surveyid, 1, 8)
 
 
-# drop FA13 and SU13 for now
+# drop SU13 for now
 coy <- coy[-grep('SU13', coy$surveyid),]
 
 # bring in master data
