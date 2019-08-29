@@ -7,17 +7,42 @@ library(runjags)
 
 
 # read in coyote data
-coy <- read.csv("./data/coydata_withdate.csv", stringsAsFactors = FALSE)
-coy$site <- substr(coy$surveyid, 1, 8)
+coy <- read.csv("./data/coydata_to_WI14.csv", stringsAsFactors = FALSE)
+
+# fix station ids
+to_combine <- read.table("./data/sites_to_merge_sp_13.txt", header = TRUE, sep = "\t",
+                         stringsAsFactors = FALSE)
+
+o1 <- to_combine[to_combine$group==1,]
+o1$site_no_number <- paste0(o1$site_no_number, "0")
+
+
+for(i in 1:nrow(o1)){
+  
+  coy$surveyid <-  gsub(paste0(o1$Site[i],'(.*)'), 
+                        paste0(o1$site_no_number[i],"\\1") , 
+                        coy$surveyid)
+  
+}
 
 coy$site <- substr(coy$surveyid, 1, 8)
+
 
 # drop FA13 and SU13 for now
-coy <- coy[-grep('FA13|SU13', coy$surveyid),]
+coy <- coy[-grep('SU13', coy$surveyid),]
 
 # bring in master data
 master <- read.csv("./data/coyote_detection_data.csv", stringsAsFactors = FALSE)
+master$SurveyID <- gsub("S03-LPC(.*)", "S03-LCP\\1", master$SurveyID)
 
+su13 <- read.csv("./data/false_su13.csv", stringsAsFactors = FALSE)
+mf13 <- read.csv("./data/fa13_master.csv", stringsAsFactors = FALSE)
+mw14 <- read.csv("./data/wi14_master.csv", stringsAsFactors = FALSE)
+
+
+# create a bunk su13
+
+master <- rbind(master, su13, mf13, mw14)
 # add week to the coy data
 #  this will drop images that fall outside of our sampling period
 coy <- inner_join(coy, master[,c('SurveyID', 'Week', 'Date')],
@@ -41,13 +66,13 @@ master <- master[-which(duplicated(master)==TRUE),]
 
 
 master$Coyote[is.na(master$Coyote)] <- -1
-master$mange[is.na(master$mange)] <- -1
+#master$mange[is.na(master$mange)] <- -1
 # summarise down to weekly detections
 master_week <- master %>% group_by(SurveyID, Week) %>% 
   summarise( Coyote = max(Coyote),
-             mange = max(mange),
+            # mange = max(mange),
              station = unique(substr(SurveyID,1,8)))
-master_week$mange[master_week$mange == -1] <- NA
+#master_week$mange[master_week$mange == -1] <- NA
 master_week$Coyote[master_week$Coyote == -1] <- NA
 # c
 
@@ -55,7 +80,7 @@ master_week$Coyote[master_week$Coyote == -1] <- NA
 #  to sort by
 twenty_years_of_data <- paste(c("WI", "SP", "SU", "FA"), 
                               rep(seq(10,30,1), each = 4), 
-                              sep = "" )[2:14]
+                              sep = "" )[2:17]
 
 
 # add a season column to master week, giving it levels equal to the correct season/year order.
@@ -78,14 +103,14 @@ y_det$y[y_det$J == 0] <- NA
 y_det <- y_det[order(y_det$season, y_det$station),]
 
 # set up arrays for analysis
-week_mat <- array(master_week$Coyote, dim = c(4, 13, 122))
-site_mat <- array(master_week$station, dim = c(4, 13, 122))
+week_mat <- array(master_week$Coyote, dim = c(4, 16, 122))
+site_mat <- array(master_week$station, dim = c(4, 16, 122))
 
 # remove sites that have less than 2 seasons of data
 togo <- rep(0, 122)
 for(i in 1:122){
   na_seas <- apply(week_mat[,,i], 2, function(x) sum(is.na(x)))
-togo[i] <- ifelse(sum(na_seas==4) >11, i, 0)  
+togo[i] <- ifelse(sum(na_seas==4) >14, i, 0)  
 }
 
 week_mat <- week_mat[,,-togo[togo>0] ]
@@ -97,15 +122,16 @@ y_det$station <- factor(y_det$station, levels = sites)
 
 # set this up in a matrix for the detection model
 #  step 1. sort by site and season
-coy$season <- substr(coy$surveyid, 10,13)
+coy$season <- substr(coy$surveyid, 10,16)
 coy$season <- factor(coy$season, levels = twenty_years_of_data)
 coy <- coy[order(coy$season, coy$site),]
 
 # start making numeric vectors to represent the site, season, and week
 
 # drop data that has been excluded from occupancy analysis
+if(any(!coy$site %in% sites)){
 coy <- coy[-which(!coy$site %in% sites),]
-
+}
 
 coy$site <- factor(coy$site, levels = sites)
 
@@ -123,9 +149,9 @@ y_det$winter <- 0
 y_det$winter[grep('WI', y_det$season)] <- 1
 
 # make a vector to track each season occupancy
-season_tracker <- matrix(0, ncol = 2, nrow = 13)
-season_tracker[,1] <- seq(1, 1339, 103)
-season_tracker[,2] <- seq(103, nrow(y_det), 103)
+season_tracker <- matrix(0, ncol = 2, nrow = length(twenty_years_of_data))
+season_tracker[,1] <- seq(1, nrow(season_tracker) * length(sites), length(sites))
+season_tracker[,2] <- seq(length(sites), nrow(y_det), length(sites))
 
 
 # CONSTRUCT COVARIATES
@@ -147,8 +173,14 @@ gamma_covs <- cbind(1, gamma_covs)
 
 
 # bring in urbanization data
-urb <- read.csv("./data/raw_covariate_data.csv")
+urb <- read.csv("./data/raw_covariate_data.csv", stringsAsFactors = FALSE)
+urb <- urb[order(urb$site),]
+
+
+
 urb <- urb[which(urb$site %in% sites),]
+
+
 
 urb$site <- factor(urb$site, levels = sites)
 
@@ -158,8 +190,16 @@ urb_cov <- prcomp(urb[,-1], scale. = TRUE)
 
 urb_mat <- data.frame( site = urb$site,
                        urb1 = as.numeric(urb_cov$x[,1]) * -1,
-                       urb2 = as.numeric(urb_cov$x[,2]) * -1
-                       )
+                       urb2 = as.numeric(urb_cov$x[,2]) * -1,
+                       stringsAsFactors = FALSE)
+
+#urb_mat <- rbind(urb_mat, 
+#                 data.frame(site = sites[which(!sites %in% urb_mat$site)],
+#                            urb1 = 0,
+#                            urb2 = 0))
+urb_mat$site <- factor(urb_mat$site, levels = sites)
+
+urb_mat <- urb_mat[order(urb_mat$site),]
 
 # merge with y_det
 y_det <- left_join(y_det, urb_mat, by = c('station' = 'site'))
@@ -169,7 +209,8 @@ temps <- data.frame(season = levels(y_det$season),
                     temp = c(    47, 70, 48, 
                              18, 42, 72, 47,
                              23, 43, 74, 45,
-                             20, 39 ))
+                             20, 39, 73, 53, 
+                             16))
 temps$temp <- as.numeric(scale(temps$temp))
 
 # merge with y_det
@@ -177,10 +218,12 @@ y_det <- left_join(y_det, temps, by = 'season')
 
 
 psi_covs <- cbind(1, y_det[,c('urb1','urb2')])
+#psi_covs <- cbind(psi_covs, psi_covs[,2] * psi_covs[,3])
 
 rho_covs <- cbind(1, y_det[,c('temp')])
 
-omega_covs <- cbind(1, y_det[, c('urb1','urb2', 'temp')])
+omega_covs <- cbind(1, y_det[, c('urb1','urb2')])#, 'temp')])
+#omega_covs <- cbind(omega_covs, omega_covs[,2]  * omega_covs[,3])
 
 ncov_psi <- ncol(psi_covs)
 ncov_rho <- ncol(rho_covs)
@@ -259,7 +302,7 @@ data_list <- list( y = y_det$y,
 
 
 start <- Sys.time()
-mout3 <- run.jags(model = "./jags_script/conditional_model.R",
+mout <- run.jags(model = "./jags_script/conditional_model.R",
                  monitor = c('psi',
                              'rho',
                              'omega',
@@ -273,11 +316,11 @@ mout3 <- run.jags(model = "./jags_script/conditional_model.R",
                              'n_coyote',
                              'n_mange'),
                  data = data_list,
-                 n.chains = 4,
+                 n.chains = 6,
                  inits = inits,
                  adapt = 1000,
-                 burnin = 20000,
-                 sample = ceiling(50000/4),
+                 burnin = 25000,
+                 sample = ceiling(100000/6),
                  thin = 2,
                  module = 'glm',
                  method = 'parallel')
@@ -285,109 +328,10 @@ end <- Sys.time()
 end - start
 
 
-
+library(coda)
 m2 <- as.mcmc.list(mout)
-saveRDS(mout, "./results/coyote_mcmc_images.RDS")
+saveRDS(mout, "./results/coyote_mcmc_inxs.RDS")
 ans <- summary(mout)
+#ans2 <- summary(mout2)
 str(ans)
-
-mm <- as.matrix(as.mcmc.list(mout3), chains = TRUE)
-
-
-
-# calculate coyote without mange
-newx <- cbind(1,seq(-1.8,1.8, 0.01))
-
-psi <- mm[,c(2,4)]
-omega <- mm[,c(7,9)]
-
-psi_pred <- plogis(psi %*% t(newx))
-omega_pred <- plogis(omega %*% t(newx))
-
-c_nomange <- psi_pred * (1 - omega_pred)
-c_mange <- psi_pred * omega_pred
-
-c_nomange <- t(apply(c_nomange, 2, quantile, probs = c(0.025,0.5,0.975)))
-c_mange <- t(apply(c_mange, 2, quantile, probs = c(0.025,0.5,0.975)))
-
-plot(c_nomange[,2] ~ newx[,2], xlab = "Urbanization",
-     ylab = "probability of", ylim = c(0,1), type = 'l', bty = 'l',
-     lwd = 2)
-lines(c_nomange[,1] ~ newx[,2], lty = 2)
-lines(c_nomange[,3] ~ newx[,2], lty = 2)
-
-lines(c_mange[,2] ~ newx[,2], col = "red", lwd = 2)
-lines(c_mange[,1] ~ newx[,2], col = "red", lty = 2)
-lines(c_mange[,3] ~ newx[,2], col = "red", lty = 2)
-
-legend('topright', legend = c('Coyote without mange',
-                              'Coyote with mange'),
-       col = c('black', 'red'), lwd = 2)
-
-# omega pred
-omega_2 <- t(apply(omega_pred, 2, quantile, probs = c(0.025,0.5,0.975)))
-
-plot(omega_2[,2] ~ newx[,2], xlab = "Urbanization",
-     ylab = "probability of a coyote having mange", 
-     ylim = c(0,1), type = 'l', bty = 'l',
-     lwd = 2)
-lines(omega_2[,1] ~ newx[,2], lty = 2)
-lines(omega_2[,3] ~ newx[,2], lty = 2)
-
-esties <- ans[1:28,1:3]
-
-pr_coy <- ans[1:6,2]
-
-omega_rans <- mm[,c(43:55)] 
-for(i in 1:nrow(omega_rans)){
-  omega_rans[i,] <- mm[i,7] + omega_rans[i,]
-}
-
-omega_prob <- apply(plogis(omega_rans), 2, quantile,
-                    probs = c(0.025,0.5,0.975))
-plot(omega_prob[2,] ~ c(1:13), bty = 'l', ylim = c(0,0.75),
-     pch = 20, cex = 2, ylab= 'probability of mange')
-
-for(i in 1:13){
-  lines(x = rep(i, 2),
-        y = c(omega_prob[1,i], omega_prob[3,i]))
-}
-
-
-oc <- plogis(mm[,2])
-
-ocm <- plogis(mm[,8])
-
-coyote_occ <- oc * (1 - ocm)
-coyote_mocc <- oc *  ocm
-
-both <- cbind( 1 - oc, coyote_occ, coyote_mocc)
-
-apply(both, 2, quantile, probs = c(0.025,0.5,0.975))
-
-obs <- apply(z, 2, table)
-
-mean(obs[2, ] / obs[1,])
-
-b1 <- plogis(-0.43) # detection coyote 
-b2 <- plogis(-1.60) # detection mange
-
-
-
-coy_det <- c(1 - b1, b1 * (1 - b2), b1 * b2)
-
-just_coy <- c(1 - b1, b1)
-
-just_coy <- apply(z, 2, table)
-
-mean(just_coy[3,] / just_coy[2,])
-
-c1 <- plogis(-0.1 - 0.64 * seq(-2,2,0.1))
-c2 <- plogis(0.16 - 0.11 * seq(-2,2,0.1))
-
-coy_mange <- cbind(1 - c1, c1 * (1 - c2), c1 * c2)
-
-urb <- seq(-2, 2, by = 0.1)
-plot(coy_mange[,2] ~ urb, type = 'l', ylim = c(0,0.5))
-lines(coy_mange[,3] ~ urb, col = "purple", lwd = 2)
 

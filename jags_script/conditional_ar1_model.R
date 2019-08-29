@@ -4,18 +4,22 @@ model{
     psi[pc] ~ dlogis(0, 1)
   }
   for(rc in 1:ncov_rho){
-    rho[rc] ~ dlogis(0,1)
+    rho[rc] ~ dlogis(0, 1)
   }
   for(oc in 1:ncov_omega){
-    omega[oc] ~ dlogis(0,1)
+    omega[oc] ~ dlogis(0, 1)
   }
   for(gc in 1:ncov_gamma){
-    gamma[gc] ~ dlogis(0,1)
+    gamma[gc] ~ dlogis(0, 1)
   }
-  for(ns in 1:nseason){
-    psi_ranef[ns] ~ dnorm(0, tau_psi)
+
+  psi_ranef[1] ~ dlogis(0,1)
+  omega_ranef[1] ~ dlogis(0,1)
+  rho_ranef[1] ~ dnorm(0, tau_rho)
+  for(ns in 2:nseason){
+    psi_ranef[ns] ~ dnorm(psi_ranef[ns-1], tau_psi)
     rho_ranef[ns] ~ dnorm(0, tau_rho)
-    omega_ranef[ns] ~ dnorm(0, tau_omega)
+    omega_ranef[ns] ~ dnorm(omega_ranef[ns-1], tau_omega)
   }
   tau_psi ~ dgamma(1, 1)
   tau_rho ~ dgamma(1, 1)
