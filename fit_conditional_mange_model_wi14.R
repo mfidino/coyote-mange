@@ -6,47 +6,92 @@ library(runjags)
 
 
 # read in coyote data
-coy <- read.csv("./data/coydata_to_WI14.csv", stringsAsFactors = FALSE)
+coy <- read.csv(
+  "./data/coydata_to_wi14_full.csv",
+  stringsAsFactors = FALSE
+)
 
-# fix station ids
-to_combine <- read.table("./data/sites_to_merge_sp_13.txt", header = TRUE, sep = "\t",
-                         stringsAsFactors = FALSE)
 
+# fix station ids, there are some sites that are actually the same
+#  but have a different trailing number (e.g., same park, but camera moved
+#  a small amount).
+to_combine <- read.table(
+  "./data/sites_to_merge_sp_13.txt",
+  header = TRUE,
+  sep = "\t",
+  stringsAsFactors = FALSE
+)
+
+# query to sites that need to be grouped
 o1 <- to_combine[to_combine$group==1,]
+# add a trailing zero for new site name
 o1$site_no_number <- paste0(o1$site_no_number, "0")
 
-
+# loop through and make the changes to coy object
 for(i in 1:nrow(o1)){
-  
-  coy$surveyid <-  gsub(paste0(o1$Site[i],'(.*)'), 
-                        paste0(o1$site_no_number[i],"\\1") , 
-                        coy$surveyid)
-  
+  coy$surveyid <-  gsub(
+    paste0(
+      o1$Site[i],
+      '(.*)'
+    ), 
+    paste0(
+      o1$site_no_number[i],
+      "\\1"
+    ), 
+    coy$surveyid
+  )
 }
 
-coy$site <- substr(coy$surveyid, 1, 8)
+# create a site vector, which is the first 8 characters of the survey ID
+coy$site <- substr(
+  coy$surveyid,
+  1,
+  8
+)
 
+# bring in master data (i.e., the detection history data).
+master <- read.csv(
+  "./data/coyote_detection_data.csv",
+  stringsAsFactors = FALSE
+)
+# fix typo in site name
+master$SurveyID <- gsub(
+  "S03-LPC(.*)",
+  "S03-LCP\\1",
+  master$SurveyID
+)
 
-# drop SU13 for now
-coy <- coy[-grep('SU13', coy$surveyid),]
+# bring in the next 3 seasons of data
+ms13 <- read.csv(
+  "./data/su13_master.csv",
+  stringsAsFactors = FALSE
+)
+mf13 <- read.csv(
+  "./data/fa13_master.csv",
+  stringsAsFactors = FALSE
+)
+mw14 <- read.csv(
+  "./data/wi14_master.csv",
+  stringsAsFactors = FALSE
+)
+# combine them
+master <- rbind(
+  master,
+  ms13,
+  mf13,
+  mw14
+)
 
-# bring in master data
-master <- read.csv("./data/coyote_detection_data.csv", stringsAsFactors = FALSE)
-master$SurveyID <- gsub("S03-LPC(.*)", "S03-LCP\\1", master$SurveyID)
-
-ms13 <- read.csv("./data/su13_master.csv", stringsAsFactors = FALSE)
-mf13 <- read.csv("./data/fa13_master.csv", stringsAsFactors = FALSE)
-mw14 <- read.csv("./data/wi14_master.csv", stringsAsFactors = FALSE)
-
-
-# create a bunk su13
-
-master <- rbind(master, ms13, mf13, mw14)
 # add week to the coy data
 #  this will drop images that fall outside of our sampling period
-coy <- inner_join(coy, master[,c('SurveyID', 'Week', 'Date')],
-                  by = c('date' = 'Date', 'surveyid' = 'SurveyID'))
-
+coy <- inner_join(
+  coy,
+  master[,c('SurveyID', 'Week', 'Date')],
+  by = c(
+    'date' = 'Date',
+    'surveyid' = 'SurveyID'
+  )
+)
 
 tmp_master <- master
 tmp_master$mrow <- 1:nrow(master)
@@ -164,22 +209,17 @@ coy$num_sev <- as.numeric(factor(coy$severity,
 gamma_covs <- coy[,c('blur', 'In_color','propbodyvis')]
 
 
-to_1 <- which(gamma_covs$blur>=500)
+to_1 <- which(gamma_covs$blur>=mean(gamma_covs$blur))
 gamma_covs$blur[to_1] <- 1
 gamma_covs$blur[-to_1] <- 0
 gamma_covs$propbodyvis <- scale(gamma_covs$propbodyvis)
 gamma_covs <- cbind(1, gamma_covs)
 
-
 # bring in urbanization data
-urb <- read.csv("./data/raw_covariate_data.csv", stringsAsFactors = FALSE)
+
+urb <- read.csv("./data/newest_covariates.csv", stringsAsFactors = FALSE)
 urb <- urb[order(urb$site),]
-
-
-
 urb <- urb[which(urb$site %in% sites),]
-
-
 
 urb$site <- factor(urb$site, levels = sites)
 
@@ -189,8 +229,9 @@ urb_cov <- prcomp(urb[,-1], scale. = TRUE)
 
 urb_mat <- data.frame( site = urb$site,
                        urb1 = as.numeric(urb_cov$x[,1]) * -1,
-                       urb2 = as.numeric(urb_cov$x[,2]) * -1,
-                       stringsAsFactors = FALSE)
+                       urb2 = as.numeric(urb_cov$x[,2]),
+                       stringsAsFactors = FALSE
+           )
 
 #urb_mat <- rbind(urb_mat, 
 #                 data.frame(site = sites[which(!sites %in% urb_mat$site)],
@@ -223,6 +264,7 @@ rho_covs <- cbind(1, y_det[,c('temp')])
 
 omega_covs <- cbind(1, y_det[, c('urb1','urb2')])#, 'temp')])
 #omega_covs <- cbind(omega_covs, omega_covs[,2]  * omega_covs[,3])
+#omega_covs[which(y_det$fall == 1),4] <- 1
 
 ncov_psi <- ncol(psi_covs)
 ncov_rho <- ncol(rho_covs)
@@ -319,7 +361,7 @@ mout <- run.jags(model = "./jags_script/conditional_model.R",
                  inits = inits,
                  adapt = 1000,
                  burnin = 25000,
-                 sample = ceiling(100000/6),
+                 sample = ceiling(200000/6),
                  thin = 2,
                  module = 'glm',
                  method = 'parallel')

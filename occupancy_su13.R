@@ -56,3 +56,69 @@ su <- su[,colnames(master)]
 
 which(colnames(su) %in% colnames(master))
 
+write.csv(su, "./data/su13_master.csv", row.names = FALSE)
+
+# now we've got to prepare the coyote image stuff
+
+library(uwinutils)
+
+sites <- SELECT(
+  "SELECT * FROM CameraLocations cl WHERE cl.areaID = 1"
+)
+
+coy_photo <- read.csv("./../../../Desktop/coyote_2013/detections_to_update_2019-08-27.csv",
+                      stringsAsFactors = FALSE)
+
+coy_photo <- coy_photo[,c("locationName", "photoName")]
+
+coy_photo <- left_join(coy_photo, sites[,c(2,6)], by = c("locationName" = "fullName"))
+
+coy_b <- read.csv("./../../../Desktop/coyote_2013/blur_output.csv",
+                  stringsAsFactors = FALSE)
+
+coy_b$path <- strsplit(
+  coy_b$path,
+  "\\\\"
+ ) %>% 
+  sapply(
+    .,
+    "[[",
+    4
+  )
+
+
+coy_photo <- left_join(coy_photo, coy_b, by = c("photoName" = "path"))
+coy_photo$File_name_order <- NA
+coy_photo$Mange_signs_present <- NA
+coy_photo$In_color <- NA
+coy_photo$Season <- "Summer"
+coy_photo$Year <- 2013
+coy_photo$Site <- substr(coy_photo$locationAbbr, 5,7)
+coy_photo$propbodyvis <- NA
+coy_photo$propbodyvismange <- NA
+coy_photo$severity <- NA
+coy_photo$confidence <- ""
+coy_photo$surveyid <- paste0(coy_photo$locationAbbr,"-SU13")
+
+# get the date photos taken
+
+tmp <- list.files("../../../Desktop/coyote_2013/","*.jpg",  full.names = TRUE)
+ptm <- read_exif(tmp, "DateTimeOriginal")
+
+tmp <- strsplit(ptm$DateTimeOriginal, " ") %>% sapply(., "[[", 1)
+tmp <- gsub(":", "-", tmp)
+
+tmp2 <- list.files("../../../Desktop/coyote_2013/","*.jpg")
+
+to_join <- tibble(photoName = tmp2, date = tmp)
+
+coy_photo <- left_join(coy_photo, to_join, by = "photoName")
+
+coy_photo <- coy_photo[,-1]
+
+colnames(coy_photo)[1:3] <- c("new_file_name", "site", "blur")
+
+coy_photo <- coy_photo[,colnames(coy)]
+coy_photo <- coy_photo[-which(duplicated(coy_photo$new_file_name)),]
+
+write.csv(coy_photo, "su13_photos_formatted.csv", row.names = FALSE)
