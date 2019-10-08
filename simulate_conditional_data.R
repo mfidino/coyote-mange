@@ -57,32 +57,38 @@ hm <- glm(k ~ x3 + x4, family = 'binomial')
 
 data_list <- list(y = y, 
                   q = k, 
-                  x1 = x, 
-                  x2 = x2,
-                  x3 = x3, 
-                  x4 = x4,
+                  psi_cov = cbind(1,x),
+                  rho_cov = cbind(1, x2),
+                  omega_cov = cbind(1, x),
+                  gamma_cov = cbind(1, x3, x4),
                   nphoto = n_photos,
                   nsite = nsite,
-                  site_vec = true_sv)
+                  site_vec = true_sv,
+                  ncov_psi = 2,
+                  ncov_rho = 2,
+                  ncov_omega = 2,
+                  ncov_gamma = 3,
+                  J = rep(4, nsite))
 
 
 x_guess <- rep(NA, nsite) 
 x_guess[unique(true_sv[k == 1])] <- 1
 
-inits <- function(chain){
+ncov_gamma <- 3
+ncov_rho <- 2
+ncov_psi <- 2
+ncov_omega <- 2
+nseason <- 1
+
+inits_simulated <- function(chain){
   gen_list <- function(chain = chain){
     list( 
-      psi0 = rnorm(1),
-      psi1 = rnorm(1),
-      rho0 = rnorm(1),
-      rho1 = rnorm(1),
-      ome0 = rnorm(1),
-      ome1 = rnorm(1),
-      gam0 = rnorm(1, -1, 0.1),
-      gam1 = rnorm(1),
-      gam2 = rnorm(1),
-      z = y_seen,
+      z = as.numeric(y_seen),
       x = x_guess,
+      psi = rnorm(ncov_psi),
+      rho = rnorm(ncov_rho),
+      omega = rnorm(ncov_omega),
+      gamma = rnorm(ncov_gamma),
       .RNG.name = switch(chain,
                          "1" = "base::Wichmann-Hill",
                          "2" = "base::Marsaglia-Multicarry",
@@ -112,12 +118,11 @@ inits <- function(chain){
 
 library(runjags)
 
-m1 <- run.jags("conditional_model.R",
-               monitor = c("psi0", "psi1", "rho0", "rho1", "ome0", "ome1",
-                           "gam0", "gam1", "gam2", "n_coyote", "n_mange"),
+m1 <- run.jags("./jags_script/conditional_model_single_season.R",
+               monitor = c("psi", "omega","rho","gamma", "n_coyote", "n_mange"),
                data = data_list,
                n.chains = 4,
-               inits = inits,
+               inits = inits_simulated,
                burnin = 10000,
                adapt = 10000,
                sample = 20000,
@@ -125,12 +130,12 @@ m1 <- run.jags("conditional_model.R",
                method = 'parallel'
               )
 
+library(mcmcplots)
 caterplot(m1, regex = "psi|rho|gam|ome", reorder = FALSE)
 my_pars <- c(0.5, -1, -0.5, 0.5, -0.5, 0.5, -0.5, 0.25, 0.7)
 points( rev(1:9) ~ my_pars, pch = 19)
 
 mm <- as.matrix(as.mcmc.list(m1), chains = TRUE)
-
 
 # calculate coyote without mange
 newx <- cbind(1,seq(-3,3, 0.01))

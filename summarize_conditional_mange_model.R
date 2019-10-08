@@ -1,5 +1,6 @@
 library(runjags)
 library(coda)
+
 mout <- readRDS("./results/final_mange_model.rds")
 mout <- as.mcmc.list(mout)
 
@@ -19,6 +20,7 @@ pinfo <- c("psi - intercept",
            "gamma - blur",
            "gamma - in color",
            "gamma - proportion body visible")
+
 row.names(base_results)[1:12] <- pinfo
 
 hm <- which(rowSums(sign(base_results[1:12,])) %in% c(3, -3))
@@ -29,3 +31,6 @@ colnames(base_results)[4] <- "Significant"
 
 write.csv(base_results, "./results/parameter_estimates.csv", 
           quote = FALSE)
+
+
+
