@@ -1,77 +1,13 @@
+# read in the coyote image data
 coy <- read.csv(
-  "./data/coydata_to_wi14_full.csv",
+  "./data/coydata_merged_sites.csv",
   stringsAsFactors = FALSE
-)
-
-
-# fix station ids, there are some sites that are actually the same
-#  but have a different trailing number (e.g., same park, but camera moved
-#  a small amount).
-to_combine <- read.table(
-  "./data/sites_to_merge_sp_13.txt",
-  header = TRUE,
-  sep = "\t",
-  stringsAsFactors = FALSE
-)
-
-# query to sites that need to be grouped
-o1 <- to_combine[to_combine$group==1,]
-# add a trailing zero for new site name
-o1$site_no_number <- paste0(o1$site_no_number, "0")
-
-# loop through and make the changes to coy object
-for(i in 1:nrow(o1)){
-  coy$surveyid <-  gsub(
-    paste0(
-      o1$Site[i],
-      '(.*)'
-    ), 
-    paste0(
-      o1$site_no_number[i],
-      "\\1"
-    ), 
-    coy$surveyid
-  )
-}
-
-# create a site vector, which is the first 8 characters of the survey ID
-coy$site <- substr(
-  coy$surveyid,
-  1,
-  8
 )
 
 # bring in master data (i.e., the detection history data).
 master <- read.csv(
   "./data/coyote_detection_data.csv",
   stringsAsFactors = FALSE
-)
-# fix typo in site name
-master$SurveyID <- gsub(
-  "S03-LPC(.*)",
-  "S03-LCP\\1",
-  master$SurveyID
-)
-
-# bring in the next 3 seasons of data
-ms13 <- read.csv(
-  "./data/su13_master.csv",
-  stringsAsFactors = FALSE
-)
-mf13 <- read.csv(
-  "./data/fa13_master.csv",
-  stringsAsFactors = FALSE
-)
-mw14 <- read.csv(
-  "./data/wi14_master.csv",
-  stringsAsFactors = FALSE
-)
-# combine them
-master <- rbind(
-  master,
-  ms13,
-  mf13,
-  mw14
 )
 
 # add week to the coy data
@@ -85,22 +21,7 @@ coy <- inner_join(
   )
 )
 
-tmp_master <- master
-tmp_master$mrow <- 1:nrow(master)
-
-# check to see if there are detections we need to add
-test <- left_join(coy, tmp_master, by= c('surveyid' = 'SurveyID', 'date' = 'Date'))
-coyote_add <- test[which(test$Coyote == 0),]
-
-master$Coyote[coyote_add$mrow] <- 1
-
-
-# remove bmt0
-master <- master[-which(master$StationID == "D02-BMT0"),]
-# drop duplicates
-master <- master[-which(duplicated(master)==TRUE),]
-
-
+# convert down to weekly
 master$Coyote[is.na(master$Coyote)] <- -1
 #master$mange[is.na(master$mange)] <- -1
 # summarise down to weekly detections
@@ -110,18 +31,20 @@ master_week <- master %>% group_by(SurveyID, Week) %>%
              station = unique(substr(SurveyID,1,8)))
 #master_week$mange[master_week$mange == -1] <- NA
 master_week$Coyote[master_week$Coyote == -1] <- NA
-# c
+ 
+# remove master now that we have weekly detections
+rm(master)
 
 # need to order this by season / year. This generates the appropriate vector
 #  to sort by
-twenty_years_of_data <- paste(c("WI", "SP", "SU", "FA"), 
+twenty_seasons_of_data <- paste(c("WI", "SP", "SU", "FA"), 
                               rep(seq(10,30,1), each = 4), 
                               sep = "" )[2:17]
 
 
 # add a season column to master week, giving it levels equal to the correct season/year order.
 master_week$season <- factor(substr(master_week$SurveyID, 10,13),
-                             levels = twenty_years_of_data)
+                             levels = twenty_seasons_of_data)
 
 # order by season column
 master_week <- master_week[order(master_week$station, master_week$season),]
@@ -151,6 +74,9 @@ for(i in 1:122){
 
 week_mat <- week_mat[,,-togo[togo>0] ]
 site_mat <- site_mat[,,-togo[togo>0] ]
+
+rm(na_seas)
+rm(togo)
 sites <- unique(as.character(site_mat))
 
 y_det <- y_det[which(y_det$station %in% sites),]
@@ -159,7 +85,7 @@ y_det$station <- factor(y_det$station, levels = sites)
 # set this up in a matrix for the detection model
 #  step 1. sort by site and season
 coy$season <- substr(coy$surveyid, 10,16)
-coy$season <- factor(coy$season, levels = twenty_years_of_data)
+coy$season <- factor(coy$season, levels = twenty_seasons_of_data)
 coy <- coy[order(coy$season, coy$site),]
 
 # start making numeric vectors to represent the site, season, and week
@@ -179,17 +105,17 @@ coy <- coy[order( coy$season, coy$site),]
 coy$sitevec <- as.numeric(factor(coy$surveyid, levels = y_det$SurveyID))
 
 y_det$sampvec <- as.numeric(y_det$season)
-y_det$fall <- 0
-y_det$fall[grep('FA', y_det$season)] <- 1
-y_det$winter <- 0
-y_det$winter[grep('WI', y_det$season)] <- 1
+#y_det$fall <- 0
+#y_det$fall[grep('FA', y_det$season)] <- 1
+#y_det$winter <- 0
+#y_det$winter[grep('WI', y_det$season)] <- 1
 
 # make a vector to track each season occupancy
-season_tracker <- matrix(0, ncol = 2, nrow = length(twenty_years_of_data))
+season_tracker <- matrix(0, ncol = 2, nrow = length(twenty_seasons_of_data))
 season_tracker[,1] <- seq(1, nrow(season_tracker) * length(sites), length(sites))
 season_tracker[,2] <- seq(length(sites), nrow(y_det), length(sites))
 
-
+rm(twenty_seasons_of_data)
 # CONSTRUCT COVARIATES
 #coy$num_sev <- as.numeric(factor(coy$severity,
 #                                 levels = c('None',
@@ -200,12 +126,14 @@ season_tracker[,2] <- seq(length(sites), nrow(y_det), length(sites))
 #mange detection
 gamma_covs <- coy[,c('blur', 'In_color','propbodyvis')]
 
-
+# changing blur to binary (greater or less than mean).
 to_1 <- which(gamma_covs$blur>=mean(gamma_covs$blur))
 gamma_covs$blur[to_1] <- 1
 gamma_covs$blur[-to_1] <- 0
 gamma_covs$propbodyvis <- scale(gamma_covs$propbodyvis)
 gamma_covs <- cbind(1, gamma_covs)
+
+rm(to_1)
 
 # bring in urbanization data
 
@@ -225,10 +153,7 @@ urb_mat <- data.frame( site = urb$site,
                        stringsAsFactors = FALSE
 )
 
-#urb_mat <- rbind(urb_mat, 
-#                 data.frame(site = sites[which(!sites %in% urb_mat$site)],
-#                            urb1 = 0,
-#                            urb2 = 0))
+
 urb_mat$site <- factor(urb_mat$site, levels = sites)
 
 urb_mat <- urb_mat[order(urb_mat$site),]
@@ -246,7 +171,7 @@ temps <- data.frame(season = levels(y_det$season),
 temps$temp <- as.numeric(scale(temps$temp))
 
 # merge with y_det
-y_det <- left_join(y_det, temps, by = 'season')
+y_det <- suppressWarnings(left_join(y_det, temps, by = 'season'))
 
 
 psi_covs <- cbind(1, y_det[,c('urb1','urb2')])
@@ -334,4 +259,15 @@ data_list <- list( y = y_det$y,
                    site_vec = coy$sitevec)
 
 
-
+rm(sites)
+rm(site_mat)
+rm(week_mat)
+rm(i)
+rm(z_start)
+rm(temps)
+rm(gamma_covs)
+rm(omega_covs)
+rm(psi_covs)
+rm(rho_covs)
+rm(urb_mat)
+rm(urb)
