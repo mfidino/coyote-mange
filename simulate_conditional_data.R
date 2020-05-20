@@ -23,13 +23,11 @@ z_det <- 0.5 - 1 * x
 z_prob <- plogis(z_det)
 
 # true location of species
-z <- rbinom(
-  nsite,
-  1,
-  z_prob
-)
+z <- rbinom(nsite,1,z_prob)
 
+####################
 # the observed data
+####################
 
 # species detection logit-linear predictor
 x2 <- rnorm(nsite)
@@ -58,9 +56,9 @@ n_photos <- sum(photos_per_site)
 x3 <- rnorm(n_photos)
 x4 <- rbinom(n_photos, 1, 0.3)
 
-
 my_sites <- data.frame(sites = sites_with_photos,
                        count = photos_per_site)
+
 true_sv <- rep(my_sites$sites, my_sites$count)
 site_photos <- vector('list', length = sum(y>0))
 
@@ -71,10 +69,7 @@ k_prob <- plogis(k_det) * as.numeric(y_seen[true_sv] * w[true_sv])
 
 k <- rbinom(n_photos, 1, k_prob)
 
-hm <- glm(k ~ x3 + x4, family = 'binomial')
-
 # put together the data list that we need for this analysis
-
 data_list <- list(y = y, 
                   q = k, 
                   psi_cov = cbind(1,x),
@@ -134,8 +129,6 @@ inits_simulated <- function(chain){
   )
   )
 }
-
-
 
 # fit the conditional model
 m1 <- run.jags("./jags_script/conditional_model_single_season.R",

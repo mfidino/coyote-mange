@@ -1,3 +1,8 @@
+library(dplyr)
+library(lubridate)
+library(runjags)
+library(coda)
+
 # read in the coyote image data
 coy <- read.csv(
   "./data/coydata_merged_sites.csv",
@@ -105,10 +110,7 @@ coy <- coy[order( coy$season, coy$site),]
 coy$sitevec <- as.numeric(factor(coy$surveyid, levels = y_det$SurveyID))
 
 y_det$sampvec <- as.numeric(y_det$season)
-#y_det$fall <- 0
-#y_det$fall[grep('FA', y_det$season)] <- 1
-#y_det$winter <- 0
-#y_det$winter[grep('WI', y_det$season)] <- 1
+
 
 # make a vector to track each season occupancy
 season_tracker <- matrix(0, ncol = 2, nrow = length(twenty_seasons_of_data))
@@ -117,11 +119,6 @@ season_tracker[,2] <- seq(length(sites), nrow(y_det), length(sites))
 
 rm(twenty_seasons_of_data)
 # CONSTRUCT COVARIATES
-#coy$num_sev <- as.numeric(factor(coy$severity,
-#                                 levels = c('None',
-#                                            'Mild',
-#                                            'Moderate',
-#                                            'Severe'))) - 1 
 
 #mange detection
 gamma_covs <- coy[,c('blur', 'In_color','propbodyvis')]
@@ -145,7 +142,6 @@ urb$site <- factor(urb$site, levels = sites)
 
 
 urb_cov <- prcomp(urb[,-1], scale. = TRUE)
-
 
 urb_mat <- data.frame( site = urb$site,
                        urb1 = as.numeric(urb_cov$x[,1]) * -1,
@@ -175,12 +171,12 @@ y_det <- suppressWarnings(left_join(y_det, temps, by = 'season'))
 
 
 psi_covs <- cbind(1, y_det[,c('urb1','urb2')])
-#psi_covs <- cbind(psi_covs, psi_covs[,2] * psi_covs[,3])
+psi_covs <- cbind(psi_covs, psi_covs[,2] * psi_covs[,3])
 
 rho_covs <- cbind(1, y_det[,c('temp')])
 
 omega_covs <- cbind(1, y_det[, c('urb1','urb2')])#, 'temp')])
-#omega_covs <- cbind(omega_covs, omega_covs[,2]  * omega_covs[,3])
+omega_covs <- cbind(omega_covs, omega_covs[,2]  * omega_covs[,3])
 #omega_covs[which(y_det$fall == 1),4] <- 1
 
 ncov_psi <- ncol(psi_covs)
@@ -269,5 +265,4 @@ rm(gamma_covs)
 rm(omega_covs)
 rm(psi_covs)
 rm(rho_covs)
-rm(urb_mat)
-rm(urb)
+#rm(urb)

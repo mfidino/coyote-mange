@@ -1,8 +1,3 @@
-library(dplyr)
-library(lubridate)
-library(exifr)
-library(runjags)
-
 # prepare all the data for analysis
 source("prep_data.R")
 
@@ -34,9 +29,8 @@ end <- Sys.time()
 end - start
 
 
-library(coda)
 m2 <- as.mcmc.list(mout)
-saveRDS(mout, "./results/coyote_mcmc_inxs.RDS")
+saveRDS(mout, "./results/coyote_mcmc_inxs_update.RDS")
 ans <- summary(mout)
 #ans2 <- summary(mout2)
 str(ans)
