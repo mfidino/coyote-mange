@@ -10,90 +10,174 @@
 library(runjags)
 library(mcmcplots)
 
-# the number of sites for this example
+# The number of sites for this example
 nsite <- 300
-# species occupancy linear predictor
+
+# The number of visits to each site
+j <- 4
+
 set.seed(-565)
 
-# an environmental covaraite
-x <- rnorm(nsite) 
+# An environmental covaraite
+x1 <- rnorm(nsite) 
 
-# occupancy  logit-linear predictor
-z_det <- 0.5 - 1 * x 
-z_prob <- plogis(z_det)
+# Occupancy  logit-linear predictor
+z_det <- 0.5 - 1 * x1 
 
-# true location of species
-z <- rbinom(nsite,1,z_prob)
+# Probability of occupancy
+z_prob <- plogis(
+  z_det
+)
+
+# True occupancy status of species
+z <- rbinom(
+  nsite,
+  1,
+  z_prob
+)
 
 ####################
 # the observed data
 ####################
 
-# species detection logit-linear predictor
-x2 <- rnorm(nsite)
+# A different covariate for detection
+x2 <- rnorm(
+  nsite
+)
 
+# Logit-linear predictor
 y_det <- -0.5 + 0.5 * x2
-y_prob <- plogis(y_det) * z
-# assuming 4 weeks of sampling
-y <- rbinom(nsite, 4, y_prob)
 
-# mange linear predictor assuming it's the same covariate as in occupancy
-w_det <- -0.5 + 0.5 * x 
-w_prob <- plogis(w_det) * z
+# The probability of detection given presence
+y_prob <- plogis(
+  y_det
+)
 
-w <- rbinom(nsite, 1, w_prob)
+# The observed data 
+#  Detection probability is 0 if species is not present
+y <- rbinom(
+  nsite,
+  j,
+  y_prob * z
+)
 
-# mange, by photo, linear predictor
+# Mange logit-linear predictor.
+#  We will use the same covariate as we did with the latent
+#  occupancy state.
+w_det <- -0.5 + 0.5 * x1 
 
-# step 1. Figure out where we got photos
-sites_with_photos <- which(y>0)
+# the probability a coyote is mangy at the site
+w_prob <- plogis(
+  w_det
+) 
 
-# step 2. simulate number of photos per site
-photos_per_site <- sample(1:30, length(sites_with_photos), replace = TRUE)
-n_photos <- sum(photos_per_site)
+# The mange status of coyote across the sites
+w <- rbinom(
+  nsite,
+  1,
+  w_prob * z
+)
 
-# covaraites, one binary, one continuous
-x3 <- rnorm(n_photos)
-x4 <- rbinom(n_photos, 1, 0.3)
+# Simulate mange detection per image
 
-my_sites <- data.frame(sites = sites_with_photos,
-                       count = photos_per_site)
+# Step 1. figure out where we collected photos
+sites_with_photos <- which(
+  y>0
+)
 
-true_sv <- rep(my_sites$sites, my_sites$count)
-site_photos <- vector('list', length = sum(y>0))
+# Step 2. simulate number of photos per site
+photos_per_site <- sample(
+  1:30,
+  length(sites_with_photos),
+  replace = TRUE
+)
 
-k_det <- -0.5 + 0.25 * x3 + 0.7 * x4
+# This is the total number of images
+n_photos <- sum(
+  photos_per_site
+)
 
-y_seen <- as.numeric(y>0)
-k_prob <- plogis(k_det) * as.numeric(y_seen[true_sv] * w[true_sv])
+# This is a data.frame where each row has info on the sites
+#  with images and the number of images at that site.
+my_sites <- data.frame(
+  sites = sites_with_photos,
+  count = photos_per_site
+)
 
-k <- rbinom(n_photos, 1, k_prob)
+# This is the site index. It is of length n_photos. Each
+#  element represents the site an image belongs to.
+site_idx <- rep(
+  my_sites$sites,
+  my_sites$count
+)
+
+# Covariates, one binary, one continuous
+x3 <- rnorm(
+  n_photos
+)
+
+x4 <- rbinom(
+  n_photos,
+  1,
+  0.3
+)
+
+# Logit-linear predictor for detecting mange given presence
+g_det <- -0.5 + 0.25 * x3 + 0.7 * x4
+
+# The probability of detecting mange in an image given presence
+g_prob <- plogis(
+  g_det
+)
+
+# A binary vector that determines which sites we have observed
+#  the species. We use this and the 'w' vector to simulate
+#  our observed data. Basically we need a photo at the site
+#  and mangy coyote must also be at the site.
+y_observed <- as.numeric(
+  y>0
+)
+
+g <- rbinom(
+  n_photos,
+  1,
+  g_prob * as.numeric(
+    y_observed[site_idx] * w[site_idx]
+  )
+)
+
+# This is the initial values for whether mange is at a site. It
+#  equals 1 if we observed it and is NA otherwise.
+x_guess <- rep(
+  NA, 
+  nsite
+) 
+x_guess[unique(site_idx[g == 1])] <- 1
+
+# The number of parameters we are estimating
+ncov_psi <- 2
+ncov_rho <- 2
+ncov_omega <- 2
+ncov_gamma <- 3
 
 # put together the data list that we need for this analysis
-data_list <- list(y = y, 
-                  q = k, 
-                  psi_cov = cbind(1,x),
-                  rho_cov = cbind(1, x2),
-                  omega_cov = cbind(1, x),
-                  gamma_cov = cbind(1, x3, x4),
-                  nphoto = n_photos,
-                  nsite = nsite,
-                  site_vec = true_sv,
-                  ncov_psi = 2,
-                  ncov_rho = 2,
-                  ncov_omega = 2,
-                  ncov_gamma = 3,
-                  J = rep(4, nsite))
+data_list <- list(
+  y = y, 
+  q = g, 
+  psi_cov = cbind(1, x),
+  rho_cov = cbind(1, x2),
+  omega_cov = cbind(1, x),
+  gamma_cov = cbind(1, x3, x4),
+  nphoto = n_photos,
+  nsite = nsite,
+  site_vec = site_idx,
+  ncov_psi = ncov_psi,
+  ncov_rho = ncov_rho,
+  ncov_omega = ncov_omega,
+  ncov_gamma = ncov_gamma,
+  J = rep(j,nsite)
+)
 
-
-x_guess <- rep(NA, nsite) 
-x_guess[unique(true_sv[k == 1])] <- 1
-
-ncov_gamma <- 3
-ncov_rho <- 2
-ncov_psi <- 2
-ncov_omega <- 2
-nseason <- 1
 
 # generate initial values for the analysis
 inits_simulated <- function(chain){
@@ -131,17 +215,18 @@ inits_simulated <- function(chain){
 }
 
 # fit the conditional model
-m1 <- run.jags("./jags_script/conditional_model_single_season.R",
-               monitor = c("psi", "omega","rho","gamma", "n_coyote", "n_mange"),
-               data = data_list,
-               n.chains = 4,
-               inits = inits_simulated,
-               burnin = 10000,
-               adapt = 10000,
-               sample = 20000,
-               modules = 'glm',
-               method = 'parallel'
-              )
+m1 <- run.jags(
+  "./jags_script/conditional_model_single_season.R",
+  monitor = c("psi", "omega","rho","gamma", "n_coyote", "n_mange"),
+  data = data_list,
+  n.chains = 4,
+  inits = inits_simulated,
+  burnin = 10000,
+  adapt = 10000,
+  sample = 20000,
+  modules = 'glm',
+  method = 'parallel'
+)
 
 # put together a plot of the parameter estimates
 #  and compare them to the true values
