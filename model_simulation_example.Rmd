@@ -13,8 +13,6 @@ library(runjags)
 library(mcmcplots)
 ```
 
-## Setting the stage the simulation
-
 To keep things tractable we will simulate data for a single
 season at $n = 300$ sites. Finally, we assume that 
 there a total of $J = 4$ repeat visits to each site within this
@@ -367,16 +365,18 @@ m1 <- run.jags(
 )
 ```
 
-And here are the posterior estimates compared to the simulated parameters, which
-are the black dots.
-```{r mcmc_plots}
+And here are the posterior estimates compared to the simulated parameters.
+Blue dots are median estimates, blue horizontal lines are 95% CI, and black dots are the true simulated values.
+\
+```{r mcmc_plots, echo = FALSE}
 m1 <- readRDS("simulated_posterior.RDS")
 # put together a plot of the parameter estimates
 #  and compare them to the true values
-mcmcplots::caterplot(
+suppressWarnings(mcmcplots::caterplot(
   m1,
   regex = "psi|rho|gam|ome",
   reorder = FALSE
+)
 )
 my_pars <- c(0.5, -1, -0.5, 0.5, -0.5, 0.5, -0.5, 0.25, 0.7)
 points(
