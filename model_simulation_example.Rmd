@@ -282,7 +282,7 @@ model{
 \
 And here is how we fit the simulated data to the `JAGS` model using
 the `run.jags` packages.
-```{r fit_model}
+```{r fit_model, eval = FALSE}
 
 # This is the initial values for whether mange is at a site. It
 #  equals 1 if we observed it and is NA otherwise.
@@ -367,3 +367,22 @@ m1 <- run.jags(
 )
 ```
 
+And here are the posterior estimates compared to the simulated parameters, which
+are the black dots.
+```{r mcmc_plots}
+m1 <- readRDS("simulated_posterior.RDS")
+# put together a plot of the parameter estimates
+#  and compare them to the true values
+mcmcplots::caterplot(
+  m1,
+  regex = "psi|rho|gam|ome",
+  reorder = FALSE
+)
+my_pars <- c(0.5, -1, -0.5, 0.5, -0.5, 0.5, -0.5, 0.25, 0.7)
+points(
+  rev(1:9) ~ my_pars,
+  pch = 19
+)
+
+
+```

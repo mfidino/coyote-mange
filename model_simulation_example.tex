@@ -1,0 +1,513 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Simulated occupancy image analysis for Murray et al.},
+  pdfauthor={Mason Fidino},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{bm}
+
+\title{Simulated occupancy image analysis for Murray et al.}
+\author{Mason Fidino}
+\date{6/26/2020}
+
+\begin{document}
+\maketitle
+
+\hypertarget{setting-the-stage-the-simulation}{%
+\subsection{Setting the stage the
+simulation}\label{setting-the-stage-the-simulation}}
+
+To keep things tractable we will simulate data for a single season at
+\(n = 300\) sites. Finally, we assume that there a total of \(J = 4\)
+repeat visits to each site within this single sampling season (e.g.,
+four weeks of camera trapping).\\
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Set seed for reproducibility}
+\KeywordTok{set.seed}\NormalTok{(}\OperatorTok{-}\DecValTok{565}\NormalTok{)}
+
+\CommentTok{# The number of sites for this example}
+\NormalTok{nsite <-}\StringTok{ }\DecValTok{300}
+
+\CommentTok{# The number of visits to each site}
+\NormalTok{j <-}\StringTok{ }\DecValTok{4}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{the-occupancy-model}{%
+\subsection{The Occupancy model}\label{the-occupancy-model}}
+
+This is for the first part of the model. In our own analysis, this part
+of the analysis estimates the proability of coyote occupancy, mangy or
+otherwise, as well as the probability of detecting coyote, mangy or
+otherwise, on one of the repeat visits assuming they are present. More
+generally, the log-odds a species is detected at \(s\) in \(1,...,S\)
+sites is \(logit(\psi_s) = \bm{a^T x_s}\), where \(\bm{a}\) is a vector
+of parameters and \(\bm{X}\) is row \(s\) of a conformable matrix of
+covariates where the first column is all \(1's\) to account for the
+intercept. For this simulation we will use one covariate on site
+occupancy. Thus, we will need to specify an intercept (\(a_0\)) and
+slope term (\(a_1\)) to estimate from the simulated data.
+
+\[logit(\psi_s) = \bm{a^T x_s} = a_0 x_{s,1} + a_1 x_{s,2} = 0.5 - 1 x_s\]\\
+With our environmental covariate (\(\bm{x}\)) and these logit-scaled
+parameters we can simulate the occupancy status of this species at the
+\(S\) sites.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# An environmental covariate for occupancy}
+\NormalTok{x1 <-}\StringTok{ }\KeywordTok{rnorm}\NormalTok{(nsite)}
+
+\CommentTok{# Occupancy  logit-linear predictor}
+\NormalTok{z_det <-}\StringTok{ }\FloatTok{0.5} \OperatorTok{-}\StringTok{ }\DecValTok{1} \OperatorTok{*}\StringTok{ }\NormalTok{x1 }
+
+\CommentTok{# Probability of occupancy}
+\NormalTok{z_prob <-}\StringTok{ }\KeywordTok{plogis}\NormalTok{(}
+\NormalTok{  z_det}
+\NormalTok{)}
+
+\CommentTok{# True occupancy status of species}
+\NormalTok{z <-}\StringTok{ }\KeywordTok{rbinom}\NormalTok{(}
+\NormalTok{  nsite,}
+  \DecValTok{1}\NormalTok{,}
+\NormalTok{  z_prob}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+If you have been following along then this species should be at
+\texttt{sum(z)\ ==\ 180} sites.\\
+We do not perfectly observe the occupancy status of this species. We
+will let the log-odds we detect this species to vary along one
+covariate.
+
+\[logit(\rho_s) = \bm{b^T x_s} = b_0 x_{s,1} + b_1 x_{s,2} = -0.5 + 0.5 x_s\]\\
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# A different covariate for detection}
+\NormalTok{x2 <-}\StringTok{ }\KeywordTok{rnorm}\NormalTok{(}
+\NormalTok{  nsite}
+\NormalTok{)}
+
+\CommentTok{# Logit-linear predictor}
+\NormalTok{y_det <-}\StringTok{ }\FloatTok{-0.5} \OperatorTok{+}\StringTok{ }\FloatTok{0.5} \OperatorTok{*}\StringTok{ }\NormalTok{x2}
+
+\CommentTok{# The probability of detection given presence}
+\NormalTok{y_prob <-}\StringTok{ }\KeywordTok{plogis}\NormalTok{(}
+\NormalTok{  y_det}
+\NormalTok{)}
+
+\CommentTok{# The observed data }
+\CommentTok{#  Detection probability is 0 if species is not present}
+\NormalTok{y <-}\StringTok{ }\KeywordTok{rbinom}\NormalTok{(}
+\NormalTok{  nsite,}
+\NormalTok{  j,}
+\NormalTok{  y_prob }\OperatorTok{*}\StringTok{ }\NormalTok{z}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Thus, in this simulation we failed to detect this species at
+\texttt{sum(z)\ -\ sum(y\textgreater{}0)\ ==\ 29} sites.\\
+That is all there is to the first part of the model. It's just a
+standard occupancy model and could be traded out for literally any other
+style of occupancy model you may be interested in using.
+
+\hypertarget{the-conditional-by-image-model}{%
+\subsection{The conditional by-image
+model}\label{the-conditional-by-image-model}}
+
+In our analysis this is the conditional mange model, as that is the
+additional state we are interested in estimating. More generally, all
+that is needed is for there to be an additional state that can be
+observed on the images of a target species. The latent-state part of
+this model is very similar to the latent-state of the occupancy model
+except it can only happen if the species is present at the site. We
+cannot view a `coyote with mange' if `coyote, mangy or otherwise' are
+not present. The log-odds of this latent state is\\
+\[logit(\omega_s) = \bm{c^T x_s} = c_0 x_{s,1} + c_1 x_{s,2} = -0.5 + 0.5 x_s\]\\
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Mange logit-linear predictor.}
+\CommentTok{#  We will use the same covariate as we did with the latent}
+\CommentTok{#  occupancy state.}
+\NormalTok{w_det <-}\StringTok{ }\FloatTok{-0.5} \OperatorTok{+}\StringTok{ }\FloatTok{0.5} \OperatorTok{*}\StringTok{ }\NormalTok{x1 }
+
+\CommentTok{# the probability a coyote is mangy at the site}
+\NormalTok{w_prob <-}\StringTok{ }\KeywordTok{plogis}\NormalTok{(}
+\NormalTok{  w_det}
+\NormalTok{) }
+
+\CommentTok{# The mange status of coyote across the sites}
+\NormalTok{w <-}\StringTok{ }\KeywordTok{rbinom}\NormalTok{(}
+\NormalTok{  nsite,}
+  \DecValTok{1}\NormalTok{,}
+\NormalTok{  w_prob }\OperatorTok{*}\StringTok{ }\NormalTok{z}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+The observation model here substantially varies from a standard
+occupancy model because each site has a different number of images. We
+know that every site we detected the species will have at least one
+image. As we are going to iterate through all of the images we simply
+need a way to link an image to the appropriate site within the model.
+Likewise, for this simulation we will generate a different number of
+images per site.\\
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Step 1. figure out where we collected photos}
+\NormalTok{sites_with_photos <-}\StringTok{ }\KeywordTok{which}\NormalTok{(}
+\NormalTok{  y}\OperatorTok{>}\DecValTok{0}
+\NormalTok{)}
+
+\CommentTok{# Step 2. simulate number of photos per site}
+\NormalTok{photos_per_site <-}\StringTok{ }\KeywordTok{sample}\NormalTok{(}
+  \DecValTok{1}\OperatorTok{:}\DecValTok{30}\NormalTok{,}
+  \KeywordTok{length}\NormalTok{(sites_with_photos),}
+  \DataTypeTok{replace =} \OtherTok{TRUE}
+\NormalTok{)}
+
+\CommentTok{# This is the total number of images}
+\NormalTok{n_photos <-}\StringTok{ }\KeywordTok{sum}\NormalTok{(}
+\NormalTok{  photos_per_site}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+Now that we have the images, we are going to introduce uncertainty in
+our ability to detect a mangy coyote in an image given that mangy coyote
+are present at a site. Let the log-odds we detect a mangy coyote in
+image \(i\) be:\\
+\[logit(\gamma_i) = \bm{d^T x_i} = d_0 x_{i,1} + d_1 x_{i,2} + d_2 x_{i,3}= -0.5 + 0.25 x_{i,2} + 0.7 x_{i,3}\]
+Now, we need \_to come up with a way to link images to sites. We can use
+a vector of length \texttt{n\_photos} where each element is an integer
+that represents what site image \(i\) belongs to.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# This is a data.frame where each row has info on the sites}
+\CommentTok{#  with images and the number of images at that site.}
+\NormalTok{my_sites <-}\StringTok{ }\KeywordTok{data.frame}\NormalTok{(}
+  \DataTypeTok{sites =}\NormalTok{ sites_with_photos,}
+  \DataTypeTok{count =}\NormalTok{ photos_per_site}
+\NormalTok{)}
+
+\CommentTok{# This is the site index. It is of length n_photos. Each}
+\CommentTok{#  element represents the site an image belongs to.}
+\NormalTok{site_idx <-}\StringTok{ }\KeywordTok{rep}\NormalTok{(}
+\NormalTok{  my_sites}\OperatorTok{$}\NormalTok{sites,}
+\NormalTok{  my_sites}\OperatorTok{$}\NormalTok{count}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+The vector \texttt{site\_idx} can be used to link the images to sites.\\
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Covariates, one binary, one continuous}
+\NormalTok{x3 <-}\StringTok{ }\KeywordTok{rnorm}\NormalTok{(}
+\NormalTok{  n_photos}
+\NormalTok{)}
+
+\NormalTok{x4 <-}\StringTok{ }\KeywordTok{rbinom}\NormalTok{(}
+\NormalTok{  n_photos,}
+  \DecValTok{1}\NormalTok{,}
+  \FloatTok{0.3}
+\NormalTok{)}
+
+\CommentTok{# Logit-linear predictor for detecting mange given presence}
+\NormalTok{g_det <-}\StringTok{ }\FloatTok{-0.5} \OperatorTok{+}\StringTok{ }\FloatTok{0.25} \OperatorTok{*}\StringTok{ }\NormalTok{x3 }\OperatorTok{+}\StringTok{ }\FloatTok{0.7} \OperatorTok{*}\StringTok{ }\NormalTok{x4}
+
+\CommentTok{# The probability of detecting mange in an image given presence}
+\NormalTok{g_prob <-}\StringTok{ }\KeywordTok{plogis}\NormalTok{(}
+\NormalTok{  g_det}
+\NormalTok{)}
+
+\CommentTok{# A binary vector that determines which sites we have observed}
+\CommentTok{#  the species. We use this and the 'w' vector to simulate}
+\CommentTok{#  our observed data. Basically we need a photo at the site}
+\CommentTok{#  and mangy coyote must also be at the site.}
+\NormalTok{y_observed <-}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(}
+\NormalTok{  y}\OperatorTok{>}\DecValTok{0}
+\NormalTok{)}
+
+\CommentTok{# simulate the observed mange data}
+\NormalTok{g <-}\StringTok{ }\KeywordTok{rbinom}\NormalTok{(}
+\NormalTok{  n_photos,}
+  \DecValTok{1}\NormalTok{,}
+\NormalTok{  g_prob }\OperatorTok{*}\StringTok{ }\KeywordTok{as.numeric}\NormalTok{(}
+\NormalTok{    y_observed[site_idx] }\OperatorTok{*}\StringTok{ }\NormalTok{w[site_idx]}
+\NormalTok{  )}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\#\# Fitting the model to simulated data The JAGS model we are using is
+\texttt{"./jags\_script/conditional\_model\_single\_season.R"}. The code
+for this is
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{model\{}
+  \CommentTok{# priors}
+  \ControlFlowTok{for}\NormalTok{(pc }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\NormalTok{ncov_psi)\{}
+\NormalTok{    psi[pc] }\OperatorTok{~}\StringTok{ }\KeywordTok{dlogis}\NormalTok{(}\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+\NormalTok{  \}}
+  \ControlFlowTok{for}\NormalTok{(rc }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\NormalTok{ncov_rho)\{}
+\NormalTok{    rho[rc] }\OperatorTok{~}\StringTok{ }\KeywordTok{dlogis}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{)}
+\NormalTok{  \}}
+  \ControlFlowTok{for}\NormalTok{(oc }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\NormalTok{ncov_omega)\{}
+\NormalTok{    omega[oc] }\OperatorTok{~}\StringTok{ }\KeywordTok{dlogis}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{)}
+\NormalTok{  \}}
+  \ControlFlowTok{for}\NormalTok{(gc }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\NormalTok{ncov_gamma)\{}
+\NormalTok{    gamma[gc] }\OperatorTok{~}\StringTok{ }\KeywordTok{dlogis}\NormalTok{(}\DecValTok{0}\NormalTok{,}\DecValTok{1}\NormalTok{)}
+\NormalTok{  \}}
+  \ControlFlowTok{for}\NormalTok{(site }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\NormalTok{nsite)\{}
+    \KeywordTok{logit}\NormalTok{(psi_mu[site]) <-}\StringTok{ }\KeywordTok{inprod}\NormalTok{(psi, psi_cov[site,])}
+\NormalTok{    z[site] }\OperatorTok{~}\StringTok{ }\KeywordTok{dbern}\NormalTok{(psi_mu[site])}
+\NormalTok{  \}}
+  \ControlFlowTok{for}\NormalTok{(site }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\NormalTok{nsite)\{}
+    \KeywordTok{logit}\NormalTok{(rho_mu[site]) <-}\StringTok{ }\KeywordTok{inprod}\NormalTok{(rho, rho_cov[site,])}
+\NormalTok{    y[site] }\OperatorTok{~}\StringTok{ }\KeywordTok{dbin}\NormalTok{(rho_mu[site] }\OperatorTok{*}\StringTok{ }\NormalTok{z[site], J[site])}
+\NormalTok{  \}}
+  \ControlFlowTok{for}\NormalTok{(site }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\NormalTok{nsite)\{}
+    \KeywordTok{logit}\NormalTok{(ome_mu[site]) <-}\StringTok{ }\KeywordTok{inprod}\NormalTok{(omega, omega_cov[site,])}
+\NormalTok{    x[site] }\OperatorTok{~}\StringTok{ }\KeywordTok{dbern}\NormalTok{(ome_mu[site] }\OperatorTok{*}\StringTok{ }\NormalTok{z[site])}
+\NormalTok{  \}}
+  \ControlFlowTok{for}\NormalTok{(photo }\ControlFlowTok{in} \DecValTok{1}\OperatorTok{:}\NormalTok{nphoto)\{}
+    \KeywordTok{logit}\NormalTok{(gam_mu[photo]) <-}\StringTok{ }\KeywordTok{inprod}\NormalTok{(gamma, gamma_cov[photo,])}
+\NormalTok{    q[photo] }\OperatorTok{~}\StringTok{ }\KeywordTok{dbern}\NormalTok{(gam_mu[photo] }\OperatorTok{*}\StringTok{ }\NormalTok{x[site_vec[photo]])}
+\NormalTok{  \}}
+  \CommentTok{# derived quantities}
+
+\NormalTok{    n_coyote <-}\StringTok{ }\KeywordTok{sum}\NormalTok{(z)}
+\NormalTok{    n_mange <-}\StringTok{  }\KeywordTok{sum}\NormalTok{(x)}
+
+\NormalTok{\}}
+\end{Highlighting}
+\end{Shaded}
+
+And here is how we fit the simulated data to the \texttt{JAGS} model
+using the \texttt{run.jags} packages.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# This is the initial values for whether mange is at a site. It}
+\CommentTok{#  equals 1 if we observed it and is NA otherwise.}
+\NormalTok{x_guess <-}\StringTok{ }\KeywordTok{rep}\NormalTok{(}
+  \OtherTok{NA}\NormalTok{, }
+\NormalTok{  nsite}
+\NormalTok{) }
+\NormalTok{x_guess[}\KeywordTok{unique}\NormalTok{(site_idx[g }\OperatorTok{==}\StringTok{ }\DecValTok{1}\NormalTok{])] <-}\StringTok{ }\DecValTok{1}
+
+\CommentTok{# The number of parameters we are estimating}
+\NormalTok{ncov_psi <-}\StringTok{ }\DecValTok{2}
+\NormalTok{ncov_rho <-}\StringTok{ }\DecValTok{2}
+\NormalTok{ncov_omega <-}\StringTok{ }\DecValTok{2}
+\NormalTok{ncov_gamma <-}\StringTok{ }\DecValTok{3}
+
+\CommentTok{# put together the data list that we need for this analysis}
+\NormalTok{data_list <-}\StringTok{ }\KeywordTok{list}\NormalTok{(}
+  \DataTypeTok{y =}\NormalTok{ y, }
+  \DataTypeTok{q =}\NormalTok{ g, }
+  \DataTypeTok{psi_cov =} \KeywordTok{cbind}\NormalTok{(}\DecValTok{1}\NormalTok{, x1),}
+  \DataTypeTok{rho_cov =} \KeywordTok{cbind}\NormalTok{(}\DecValTok{1}\NormalTok{, x2),}
+  \DataTypeTok{omega_cov =} \KeywordTok{cbind}\NormalTok{(}\DecValTok{1}\NormalTok{, x1),}
+  \DataTypeTok{gamma_cov =} \KeywordTok{cbind}\NormalTok{(}\DecValTok{1}\NormalTok{, x3, x4),}
+  \DataTypeTok{nphoto =}\NormalTok{ n_photos,}
+  \DataTypeTok{nsite =}\NormalTok{ nsite,}
+  \DataTypeTok{site_vec =}\NormalTok{ site_idx,}
+  \DataTypeTok{ncov_psi =}\NormalTok{ ncov_psi,}
+  \DataTypeTok{ncov_rho =}\NormalTok{ ncov_rho,}
+  \DataTypeTok{ncov_omega =}\NormalTok{ ncov_omega,}
+  \DataTypeTok{ncov_gamma =}\NormalTok{ ncov_gamma,}
+  \DataTypeTok{J =} \KeywordTok{rep}\NormalTok{(j,nsite)}
+\NormalTok{)}
+
+
+\CommentTok{# generate initial values for the analysis}
+\NormalTok{inits_simulated <-}\StringTok{ }\ControlFlowTok{function}\NormalTok{(chain)\{}
+\NormalTok{  gen_list <-}\StringTok{ }\ControlFlowTok{function}\NormalTok{(}\DataTypeTok{chain =}\NormalTok{ chain)\{}
+    \KeywordTok{list}\NormalTok{( }
+      \DataTypeTok{z =} \KeywordTok{as.numeric}\NormalTok{(y_observed),}
+      \DataTypeTok{x =}\NormalTok{ x_guess,}
+      \DataTypeTok{psi =} \KeywordTok{rnorm}\NormalTok{(ncov_psi),}
+      \DataTypeTok{rho =} \KeywordTok{rnorm}\NormalTok{(ncov_rho),}
+      \DataTypeTok{omega =} \KeywordTok{rnorm}\NormalTok{(ncov_omega),}
+      \DataTypeTok{gamma =} \KeywordTok{rnorm}\NormalTok{(ncov_gamma),}
+      \DataTypeTok{.RNG.name =} \ControlFlowTok{switch}\NormalTok{(chain,}
+                         \StringTok{"1"}\NormalTok{ =}\StringTok{ "base::Wichmann-Hill"}\NormalTok{,}
+                         \StringTok{"2"}\NormalTok{ =}\StringTok{ "base::Marsaglia-Multicarry"}\NormalTok{,}
+                         \StringTok{"3"}\NormalTok{ =}\StringTok{ "base::Super-Duper"}\NormalTok{,}
+                         \StringTok{"4"}\NormalTok{ =}\StringTok{ "base::Mersenne-Twister"}\NormalTok{,}
+                         \StringTok{"5"}\NormalTok{ =}\StringTok{ "base::Wichmann-Hill"}\NormalTok{,}
+                         \StringTok{"6"}\NormalTok{ =}\StringTok{ "base::Marsaglia-Multicarry"}\NormalTok{,}
+                         \StringTok{"7"}\NormalTok{ =}\StringTok{ "base::Super-Duper"}\NormalTok{,}
+                         \StringTok{"8"}\NormalTok{ =}\StringTok{ "base::Mersenne-Twister"}\NormalTok{),}
+      \DataTypeTok{.RNG.seed =} \KeywordTok{sample}\NormalTok{(}\DecValTok{1}\OperatorTok{:}\FloatTok{1e+06}\NormalTok{, }\DecValTok{1}\NormalTok{)}
+\NormalTok{    )}
+\NormalTok{  \}}
+  \KeywordTok{return}\NormalTok{(}\ControlFlowTok{switch}\NormalTok{(chain,           }
+                \StringTok{"1"}\NormalTok{ =}\StringTok{ }\KeywordTok{gen_list}\NormalTok{(chain),}
+                \StringTok{"2"}\NormalTok{ =}\StringTok{ }\KeywordTok{gen_list}\NormalTok{(chain),}
+                \StringTok{"3"}\NormalTok{ =}\StringTok{ }\KeywordTok{gen_list}\NormalTok{(chain),}
+                \StringTok{"4"}\NormalTok{ =}\StringTok{ }\KeywordTok{gen_list}\NormalTok{(chain),}
+                \StringTok{"5"}\NormalTok{ =}\StringTok{ }\KeywordTok{gen_list}\NormalTok{(chain),}
+                \StringTok{"6"}\NormalTok{ =}\StringTok{ }\KeywordTok{gen_list}\NormalTok{(chain),}
+                \StringTok{"7"}\NormalTok{ =}\StringTok{ }\KeywordTok{gen_list}\NormalTok{(chain),}
+                \StringTok{"8"}\NormalTok{ =}\StringTok{ }\KeywordTok{gen_list}\NormalTok{(chain)}
+\NormalTok{  )}
+\NormalTok{  )}
+\NormalTok{\}}
+
+\CommentTok{# fit the conditional model}
+\NormalTok{m1 <-}\StringTok{ }\KeywordTok{run.jags}\NormalTok{(}
+  \StringTok{"./jags_script/conditional_model_single_season.R"}\NormalTok{,}
+  \DataTypeTok{monitor =} \KeywordTok{c}\NormalTok{(}\StringTok{"psi"}\NormalTok{, }\StringTok{"omega"}\NormalTok{,}\StringTok{"rho"}\NormalTok{,}\StringTok{"gamma"}\NormalTok{, }\StringTok{"n_coyote"}\NormalTok{, }\StringTok{"n_mange"}\NormalTok{),}
+  \DataTypeTok{data =}\NormalTok{ data_list,}
+  \DataTypeTok{n.chains =} \DecValTok{4}\NormalTok{,}
+  \DataTypeTok{inits =}\NormalTok{ inits_simulated,}
+  \DataTypeTok{burnin =} \DecValTok{10000}\NormalTok{,}
+  \DataTypeTok{adapt =} \DecValTok{10000}\NormalTok{,}
+  \DataTypeTok{sample =} \DecValTok{20000}\NormalTok{,}
+  \DataTypeTok{modules =} \StringTok{'glm'}\NormalTok{,}
+  \DataTypeTok{method =} \StringTok{'parallel'}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+And here are the posterior estimates compared to the simulated
+parameters, which are the black dots.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{m1 <-}\StringTok{ }\KeywordTok{readRDS}\NormalTok{(}\StringTok{"simulated_posterior.RDS"}\NormalTok{)}
+\CommentTok{# put together a plot of the parameter estimates}
+\CommentTok{#  and compare them to the true values}
+\NormalTok{mcmcplots}\OperatorTok{::}\KeywordTok{caterplot}\NormalTok{(}
+\NormalTok{  m1,}
+  \DataTypeTok{regex =} \StringTok{"psi|rho|gam|ome"}\NormalTok{,}
+  \DataTypeTok{reorder =} \OtherTok{FALSE}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Warning in as.mcmc.runjags(x): Combining the 4 mcmc chains together
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{my_pars <-}\StringTok{ }\KeywordTok{c}\NormalTok{(}\FloatTok{0.5}\NormalTok{, }\DecValTok{-1}\NormalTok{, }\FloatTok{-0.5}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{-0.5}\NormalTok{, }\FloatTok{0.5}\NormalTok{, }\FloatTok{-0.5}\NormalTok{, }\FloatTok{0.25}\NormalTok{, }\FloatTok{0.7}\NormalTok{)}
+\KeywordTok{points}\NormalTok{(}
+  \KeywordTok{rev}\NormalTok{(}\DecValTok{1}\OperatorTok{:}\DecValTok{9}\NormalTok{) }\OperatorTok{~}\StringTok{ }\NormalTok{my_pars,}
+  \DataTypeTok{pch =} \DecValTok{19}
+\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{model_simulation_example_files/figure-latex/mcmc_plots-1.pdf}
+
+\end{document}
