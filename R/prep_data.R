@@ -239,6 +239,55 @@ inits <- function(chain){
   )
 }
 
+
+inits_resid <- function(chain){
+  gen_list <- function(chain = chain){
+    list( 
+      z = as.numeric(z),
+      x = x_guess,
+      psi = rnorm(ncov_psi),
+      rho = rnorm(ncov_rho),
+      omega = rnorm(ncov_omega),
+      gamma = rnorm(ncov_gamma),
+      psi_ranef = rnorm(nseason),
+      rho_ranef = rnorm(nseason),
+      omega_ranef = rnorm(nseason),
+      tau_psi = rgamma(1,1,1),
+      tau_rho = rgamma(1,1,1),
+      tau_omega = rgamma(1,1,1),
+      psi_resid_tau = rgamma(1,1,1),
+      rho_resid_tau = rgamma(1,1,1),
+      ome_resid_tau = rgamma(1,1,1),
+      gam_resid_tau = rgamma(1,1,1),
+      psi_resid = rnorm(data_list$nsite),
+      rho_resid = rnorm(data_list$nsite),
+      ome_resid = rnorm(data_list$nsite),
+      gam_resid = rnorm(data_list$nphoto),
+      .RNG.name = switch(chain,
+                         "1" = "base::Wichmann-Hill",
+                         "2" = "base::Marsaglia-Multicarry",
+                         "3" = "base::Super-Duper",
+                         "4" = "base::Mersenne-Twister",
+                         "5" = "base::Wichmann-Hill",
+                         "6" = "base::Marsaglia-Multicarry",
+                         "7" = "base::Super-Duper",
+                         "8" = "base::Mersenne-Twister"),
+      .RNG.seed = sample(1:1e+06, 1)
+    )
+  }
+  return(switch(chain,           
+                "1" = gen_list(chain),
+                "2" = gen_list(chain),
+                "3" = gen_list(chain),
+                "4" = gen_list(chain),
+                "5" = gen_list(chain),
+                "6" = gen_list(chain),
+                "7" = gen_list(chain),
+                "8" = gen_list(chain)
+  )
+  )
+}
+
 data_list <- list( y = y_det$y,
                    J = y_det$J,
                    q = coy$Mange_signs_present,
