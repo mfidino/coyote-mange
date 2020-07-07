@@ -126,7 +126,6 @@ my_covars <- data.frame(
   imp = my_raster$imp
 )
 
-
 # scale the raster data the same way we did in our model
 #  The 'urb' df has our unscaled values, and has the 
 #  same column names as my_covars
@@ -164,7 +163,6 @@ coy_occ <- plogis(
 my_raster$coyote_occupancy <- coy_occ
 
 # calculate the likelihood of mange now
-
 coy_man <- cbind(
   1,
   urbPCA1,
@@ -175,7 +173,6 @@ coy_man <- cbind(
 coy_man <- plogis(coy_man)
 
 my_raster$coyote_w_mange <- coy_occ * coy_man
-
 
 # Look at observed coyote occupancy
 site_coords <- read.csv(
@@ -204,7 +201,6 @@ coy_p <- coy_p %>%
     mdet = sum(mange)
   )
 
-
 # join coy_p with the urbanization covariates
 coy_occstat <- left_join(
   site_coords,
@@ -229,7 +225,6 @@ coy_occstat <- st_as_sf(
 )
 
 # do the same for just mangy coyote
-
 coy_mange <- inner_join(
   coy_p,
   site_coords,
@@ -244,18 +239,13 @@ coy_mange$col <- ifelse(
 )
 coy_mange$cex <- 1
 
-
-
-
 coy_mange <- st_as_sf(
   coy_mange,
   coords = 4:5,
   crs = utm_crs
 )
 
-
 # bring in stream data
-
 streams <- read_sf(
   "Z:/TransectStudyGIS/Study_design/OtherShapefiles/Streams/IL_Streams_nad83.shp"
 )
@@ -309,9 +299,9 @@ points(
 )
 dev.off()
 
-# just to get the scale bar
-
-svg("coyote_occupancy_with_scale.svg", width = 5, height = 5)
+# just to get the scale bar (putting it all together
+#  in inkscape).
+svg("./plots/coyote_occupancy_with_scale.svg", width = 5, height = 5)
 plot(
   my_raster["coyote_occupancy"],
   pch = 15,
@@ -322,7 +312,7 @@ plot(
 )
 dev.off()
 
-tiff("coyote_mange.tiff", width = 5, height = 5,
+tiff("./plots/coyote_mange.tiff", width = 5, height = 5,
      units = "in", res = 600, compression = "lzw")
 
 # coyote mange

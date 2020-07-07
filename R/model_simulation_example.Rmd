@@ -369,7 +369,7 @@ And here are the posterior estimates compared to the simulated parameters.
 Blue dots are median estimates, blue horizontal lines are 95% CI, and black dots are the true simulated values.
 \
 ```{r mcmc_plots, echo = FALSE}
-m1 <- readRDS("simulated_posterior.RDS")
+m1 <- readRDS("./results/simulated_posterior.RDS")
 # put together a plot of the parameter estimates
 #  and compare them to the true values
 suppressWarnings(mcmcplots::caterplot(

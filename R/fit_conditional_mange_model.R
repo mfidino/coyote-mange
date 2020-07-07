@@ -1,5 +1,5 @@
 # prepare all the data for analysis
-source("prep_data.R")
+source("./R/prep_data.R")
 
 # fit the model
 start <- Sys.time()
@@ -32,6 +32,5 @@ end - start
 m2 <- as.mcmc.list(mout)
 saveRDS(mout, "./results/coyote_mcmc_inxs_update.RDS")
 ans <- summary(mout)
-#ans2 <- summary(mout2)
 str(ans)
 
