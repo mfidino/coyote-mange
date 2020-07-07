@@ -134,7 +134,10 @@ rm(to_1)
 
 # bring in urbanization data
 
-urb <- read.csv("./data/newest_covariates.csv", stringsAsFactors = FALSE)
+urb <- read.csv(
+  "./data/model_covariates.csv",
+  stringsAsFactors = FALSE
+)
 urb <- urb[order(urb$site),]
 urb <- urb[which(urb$site %in% sites),]
 
