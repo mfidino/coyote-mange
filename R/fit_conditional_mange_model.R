@@ -5,7 +5,7 @@ source("./R/prep_data.R")
 start <- Sys.time()
 cl <- parallel::makeCluster(4)
 mout <- run.jags(
-  model = "./jags_script/conditional_model.R",
+  model = "./jags_script/conditional_model_autologistic.R",
   monitor = c(
     'psi',
     'rho',
@@ -17,6 +17,8 @@ mout <- run.jags(
     'psi_ranef',
     'rho_ranef',
     'omega_ranef',
+    "theta_psi",
+    "theta_omega",
     'n_coyote',
     'n_mange'
   ),
@@ -37,7 +39,7 @@ end - start
 parallel::stopCluster(cl)
 
 m2 <- as.mcmc.list(mout)
-saveRDS(mout, "./results/coyote_mcmc_moredata.RDS")
+saveRDS(mout, "./results/coyote_mcmc_autologistic.RDS")
 ans <- summary(mout)
 str(ans)
 
