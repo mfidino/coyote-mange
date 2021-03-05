@@ -11,6 +11,9 @@ library(data.table)
 library(sf)
 library(prettymapr)
 
+
+# Note: There are shapefiles that are hardcoded in here, which I got
+#  from the Illinois geospatial clearinghouse
 ##############
 # I use this a lot to get everything into the same
 #  spatial coordinates, so I'm making it an object.
@@ -61,7 +64,7 @@ spatial_data <- dplyr::left_join(
 
 # read in county layers
 county <- sf::st_read(
-  "../../GIS/illinois_county",
+  "D:/GIS/illinois_county",
   layer = "IL_BNDY_County_Py"
 )
 
@@ -105,7 +108,7 @@ county_crop <-  sf::st_crop(
   sf::st_buffer(., 0)
 
 # create the urbanization metrics
-source("prep_data.R")
+source("./R/prep_data.R")
 
 # read in the results as well
 base_results <- read.csv(
@@ -247,7 +250,8 @@ coy_mange <- st_as_sf(
 
 # bring in stream data
 streams <- read_sf(
-  "Z:/TransectStudyGIS/Study_design/OtherShapefiles/Streams/IL_Streams_nad83.shp"
+  "D:/GIS/IL_streams/IL_Streams_From_100K_DLG_Ln.shp"  
+  #"Z:/TransectStudyGIS/Study_design/OtherShapefiles/Streams/IL_Streams_nad83.shp"
 )
 
 streams <- st_transform(
@@ -268,9 +272,11 @@ plot(
   reset = FALSE,
   cex = 0.5,
   main = NULL,
-  key.pos = NULL
+  key.pos = NULL,
+  pal = sf.colors(10, alpha = 0.8)
 
 )
+
 # add the stream layer
 plot(
   st_geometry(streams),
@@ -294,7 +300,7 @@ addnortharrow(pos = "topright", padin = c(1.1,0.19), scale = 0.7)
 points(
   st_coordinates(coy_occstat),
   pch = 21,
-  bg = scales::alpha(coy_occstat$col, 0.9),
+  bg = scales::alpha(coy_occstat$col, 0.7),
   cex = coy_occstat$cex
 )
 dev.off()

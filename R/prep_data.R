@@ -9,8 +9,8 @@ coy <- read.csv(
   stringsAsFactors = FALSE
 )
 
-# bring in master data (i.e., the detection history data).
-master <- read.csv(
+# bring in main data (i.e., the detection history data).
+main <- read.csv(
   "./data/coyote_detection_data.csv",
   stringsAsFactors = FALSE
 )
@@ -19,7 +19,7 @@ master <- read.csv(
 #  this will drop images that fall outside of our sampling period
 coy <- inner_join(
   coy,
-  master[,c('SurveyID', 'Week', 'Date')],
+  main[,c('SurveyID', 'Week', 'Date')],
   by = c(
     'date' = 'Date',
     'surveyid' = 'SurveyID'
@@ -27,18 +27,18 @@ coy <- inner_join(
 )
 
 # convert down to weekly
-master$Coyote[is.na(master$Coyote)] <- -1
-#master$mange[is.na(master$mange)] <- -1
+main$Coyote[is.na(main$Coyote)] <- -1
+#main$mange[is.na(main$mange)] <- -1
 # summarise down to weekly detections
-master_week <- master %>% group_by(SurveyID, Week) %>% 
+main_week <- main %>% group_by(SurveyID, Week) %>% 
   summarise( Coyote = max(Coyote),
              # mange = max(mange),
              station = unique(substr(SurveyID,1,8)))
-#master_week$mange[master_week$mange == -1] <- NA
-master_week$Coyote[master_week$Coyote == -1] <- NA
+#main_week$mange[main_week$mange == -1] <- NA
+main_week$Coyote[main_week$Coyote == -1] <- NA
  
-# remove master now that we have weekly detections
-rm(master)
+# remove main now that we have weekly detections
+rm(main)
 
 # need to order this by season / year. This generates the appropriate vector
 #  to sort by
@@ -47,15 +47,15 @@ twenty_seasons_of_data <- paste(c("WI", "SP", "SU", "FA"),
                               sep = "" )[2:17]
 
 
-# add a season column to master week, giving it levels equal to the correct season/year order.
-master_week$season <- factor(substr(master_week$SurveyID, 10,13),
+# add a season column to main week, giving it levels equal to the correct season/year order.
+main_week$season <- factor(substr(main_week$SurveyID, 10,13),
                              levels = twenty_seasons_of_data)
 
 # order by season column
-master_week <- master_week[order(master_week$station, master_week$season),]
+main_week <- main_week[order(main_week$station, main_week$season),]
 
 # doing this in long format
-y_det <- master_week %>% 
+y_det <- main_week %>% 
   group_by(SurveyID) %>% 
   summarise(J = 4 - sum(is.na(Coyote)),
             y = sum(Coyote, na.rm = TRUE),
@@ -67,8 +67,8 @@ y_det$y[y_det$J == 0] <- NA
 y_det <- y_det[order(y_det$season, y_det$station),]
 
 # set up arrays for analysis
-week_mat <- array(master_week$Coyote, dim = c(4, 16, 122))
-site_mat <- array(master_week$station, dim = c(4, 16, 122))
+week_mat <- array(main_week$Coyote, dim = c(4, 16, 122))
+site_mat <- array(main_week$station, dim = c(4, 16, 122))
 
 # remove sites that have less than 2 seasons of data
 togo <- rep(0, 122)
@@ -110,7 +110,6 @@ coy <- coy[order( coy$season, coy$site),]
 coy$sitevec <- as.numeric(factor(coy$surveyid, levels = y_det$SurveyID))
 
 y_det$sampvec <- as.numeric(y_det$season)
-
 
 # make a vector to track each season occupancy
 season_tracker <- matrix(0, ncol = 2, nrow = length(twenty_seasons_of_data))
@@ -214,6 +213,98 @@ inits <- function(chain){
       tau_psi = rgamma(1,1,1),
       tau_rho = rgamma(1,1,1),
       tau_omega = rgamma(1,1,1),
+      .RNG.name = switch(chain,
+                         "1" = "base::Wichmann-Hill",
+                         "2" = "base::Marsaglia-Multicarry",
+                         "3" = "base::Super-Duper",
+                         "4" = "base::Mersenne-Twister",
+                         "5" = "base::Wichmann-Hill",
+                         "6" = "base::Marsaglia-Multicarry",
+                         "7" = "base::Super-Duper",
+                         "8" = "base::Mersenne-Twister"),
+      .RNG.seed = sample(1:1e+06, 1)
+    )
+  }
+  return(switch(chain,           
+                "1" = gen_list(chain),
+                "2" = gen_list(chain),
+                "3" = gen_list(chain),
+                "4" = gen_list(chain),
+                "5" = gen_list(chain),
+                "6" = gen_list(chain),
+                "7" = gen_list(chain),
+                "8" = gen_list(chain)
+  )
+  )
+}
+
+
+inits_resid <- function(chain){
+  gen_list <- function(chain = chain){
+    list( 
+      z = as.numeric(z),
+      x = x_guess,
+      psi = rnorm(ncov_psi),
+      rho = rnorm(ncov_rho),
+      omega = rnorm(ncov_omega),
+      gamma = rnorm(ncov_gamma),
+      psi_ranef = rnorm(nseason),
+      rho_ranef = rnorm(nseason),
+      omega_ranef = rnorm(nseason),
+      tau_psi = rgamma(1,1,1),
+      tau_rho = rgamma(1,1,1),
+      tau_omega = rgamma(1,1,1),
+      psi_resid_tau = rgamma(1,1,1),
+      rho_resid_tau = rgamma(1,1,1),
+      ome_resid_tau = rgamma(1,1,1),
+      gam_resid_tau = rgamma(1,1,1),
+      psi_resid = rnorm(data_list$nsite, 0, 0.1),
+      rho_resid = rnorm(data_list$nsite, 0, 0.1),
+      ome_resid = rnorm(data_list$nsite, 0, 0.1),
+      gam_resid = rnorm(data_list$nphoto, 0, 0.1),
+      .RNG.name = switch(chain,
+                         "1" = "base::Wichmann-Hill",
+                         "2" = "base::Marsaglia-Multicarry",
+                         "3" = "base::Super-Duper",
+                         "4" = "base::Mersenne-Twister",
+                         "5" = "base::Wichmann-Hill",
+                         "6" = "base::Marsaglia-Multicarry",
+                         "7" = "base::Super-Duper",
+                         "8" = "base::Mersenne-Twister"),
+      .RNG.seed = sample(1:1e+06, 1)
+    )
+  }
+  return(switch(chain,           
+                "1" = gen_list(chain),
+                "2" = gen_list(chain),
+                "3" = gen_list(chain),
+                "4" = gen_list(chain),
+                "5" = gen_list(chain),
+                "6" = gen_list(chain),
+                "7" = gen_list(chain),
+                "8" = gen_list(chain)
+  )
+  )
+}
+inits_resid2 <- function(chain){
+  gen_list <- function(chain = chain){
+    list( 
+      z = as.numeric(z),
+      x = x_guess,
+      psi = rnorm(ncov_psi),
+      rho = rnorm(ncov_rho),
+      omega = rnorm(ncov_omega),
+      gamma = rnorm(ncov_gamma),
+      psi_ranef = rnorm(nseason),
+      rho_ranef = rnorm(nseason),
+      omega_ranef = rnorm(nseason),
+      tau_psi = rgamma(1,1,1),
+      tau_rho = rgamma(1,1,1),
+      tau_omega = rgamma(1,1,1),
+      psi_resid_tau = rgamma(1,1,1),
+      rho_resid_tau = rgamma(1,1,1),
+      ome_resid_tau = rgamma(1,1,1),
+      gam_resid_tau = rgamma(1,1,1),
       .RNG.name = switch(chain,
                          "1" = "base::Wichmann-Hill",
                          "2" = "base::Marsaglia-Multicarry",
