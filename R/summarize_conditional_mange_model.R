@@ -1,9 +1,9 @@
 library(runjags)
 library(coda)
 
-source("prep_data.R")
+source("./R/prep_data.R")
 
-mout <- readRDS("./results/coyote_mcmc_inxs_update.RDS")
+mout <- readRDS("./results/coyote_mcmc_moredata.RDS")
 mout <- as.mcmc.list(mout)
 
 ans <- summary(mout)
@@ -109,12 +109,17 @@ coy_p <- coy_p %>%
     mdet = sum(mange)
   )
 
+y_det[which(y_det$station == 'S03-PSP1'),]
+
 # join coy_p with the urbanization covariates
 coy_p <- dplyr::inner_join(
   coy_p,
-  urb_mat,
-  by = 'site'
-)
+  y_det[,c('station', 'urb1', 'urb2')],
+  by = c('site' = 'station')
+) %>% 
+  dplyr::distinct(.)
+
+
 
 # make new columns that denote shape and color of these points
 coy_p$color <- ifelse(
@@ -260,16 +265,35 @@ dev.off()
 
 # coyotes in general plot
 
-# a matrix of the mange results
+# a matrix of the coyote results
 res_mat <- matrix(
   df[,5],
   nrow = length(tmp1),
   ncol =length(tmp2)
 )
 
+coy_occ <- y_det[complete.cases(y_det),] %>% 
+  dplyr::group_by(station) %>% 
+  dplyr::summarise(coy = as.numeric(any(y >0)),
+                   urb1 = unique(urb1),
+                   urb2 = unique(urb2))
+                  
+
+# make new columns that denote shape and color of these points
+coy_occ$color <- ifelse(
+  coy_occ$coy > 0,
+  "gray20",
+  "gray"
+)
+coy_occ$pch <- ifelse(
+  coy_occ$coy > 0,
+  23,
+  22
+)
+
 # coyote, mangy or otherwise, plot
 tiff(
-  './plots/coyote_plot.tiff',
+  './plots/coyote_occupancy_plot.tiff',
   height = 5,
   width = 6, 
   units = 'in',
@@ -375,16 +399,16 @@ contour(
   labcex = 1.2
 )
 points(
-  coy_p$urb2 ~ coy_p$urb1,
-  bg = coy_p$color,
-  pch = coy_p$pch, 
+  coy_occ$urb2 ~ coy_occ$urb1,
+  bg = coy_occ$color,
+  pch = coy_occ$pch, 
   cex = 1.2
 )
 legend(
   'bottomleft',
   bg = 'white',
   pt.bg = c('gray20', 'gray'),
-  pch = c(24,21), 
+  pch = c(23,22), 
   legend = c(
     'Coyote\ndetected',
     'Coyote not\ndetected'
@@ -400,7 +424,7 @@ dev.off()
 n_mange <- base_results[grep("mange", row.names(base_results)),]
 
 
-tiff('site_mange.tiff', height = 5, width = 7, res = 600, units = 'in',
+{tiff('./plots/site_mange.tiff', height = 5, width = 7, res = 600, units = 'in',
      compression = "lzw")
 par(mar= c(4,5.5,1,1))
 plot(n_mange[,2], type = 'p', ylim = range(n_mange), bty = 'l', pch = 16,
@@ -412,7 +436,7 @@ lines(n_mange[,2] ~c(1:16) , lty = 2)
 se <- c("SP", "SU", "FA", "WI")
 axis(1, at= c(1:16), labels = F, tck = -0.035/2)
 mtext("Year:", 1, line = 0.4, at = -0.9, cex = 1.2)
-mtext("Season:", 1, line = 1.5, at = -1.4, cex = 1.2)
+mtext("Season:", 1, line = 1.5, at = -1.28, cex = 1.2)
 mtext(text = c(2010:2014), 1, line = 0.4, at = c(1,4,8,12, 16), cex = 1)
 mtext(text = rep(se, 4),1, line =1.5, at = c(1:16), cex = 1)
 axis(2, at = seq(0,40, 10), labels = F, tck = -0.035/2)
@@ -430,6 +454,47 @@ legend('topright', pt.bg = c('black', 'gray'), pch = c(21),
        legend = c('Estimated', 'Observed'),
        pt.cex = 1.2, cex = 1.1, bty = "n")
 dev.off()
+}
 
 
+
+# Coyote over time
+n_coyote <- base_results[grep("coyote", row.names(base_results)),]
+y_det$season <- factor(
+  y_det$season,
+  levels = levels(coy$season)
+)
+
+{tiff('./plots/site_coyote.tiff', height = 5, width = 7, res = 600, units = 'in',
+     compression = "lzw")
+par(mar= c(4,5.5,1,1))
+plot(n_coyote[,2], type = 'p', ylim = c(0,80), bty = 'l', pch = 16,
+     ylab = "", xlab = "", xaxt = 'n', yaxt = 'n', cex = 1.2)
+for(i in 1:16){
+  lines(x = rep(i, 2), y = n_coyote[i,c(1,3)])
+}
+lines(n_coyote[,2] ~c(1:16) , lty = 2)
+se <- c("SP", "SU", "FA", "WI")
+axis(1, at= c(1:16), labels = F, tck = -0.035/2)
+mtext("Year:", 1, line = 0.4, at = -0.9, cex = 1.2)
+mtext("Season:", 1, line = 1.5, at = -1.28, cex = 1.2)
+mtext(text = c(2010:2014), 1, line = 0.4, at = c(1,4,8,12, 16), cex = 1)
+mtext(text = rep(se, 4),1, line =1.5, at = c(1:16), cex = 1)
+axis(2, at = seq(0,80, 10), labels = F, tck = -0.035/2)
+axis(2, at = seq(0,80, 5), labels = F, tck = -0.035/4)
+mtext(text = seq(0,80,10),2, las = 1, at = seq(0,80,10), line = 0.8)
+
+
+coy_sea <- y_det %>% group_by(station, season) %>% 
+  summarise(coy = any(y>0)) %>% 
+  ungroup(.) %>% group_by(season) %>% 
+  summarise(coy = sum(coy, na.rm = TRUE))
+
+points(coy_sea, pch = 21, bg = "gray", cex = 1.2)
+mtext(text = "Sites with coyote", 2, at = 40, line = 3, cex = 1.4)
+legend('bottomright', pt.bg = c('black', 'gray'), pch = c(21), 
+       legend = c('Estimated', 'Observed'),
+       pt.cex = 1.2, cex = 1.1, bty = "n")
+dev.off()
+}
 

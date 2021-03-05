@@ -1,0 +1,14 @@
+# This is just a script that stores a few imagemagick calls. I'm assuming if you've opened this you already have imagemagick installed and have
+#   access to the convert function from the command line.
+
+# For putting together the two sub-figures for figure 2 and append them
+
+# step 1. add an (a) to figure 1 (assuming you are in the ./plots folder)
+
+convert -font arial -pointsize 175 -fill black -annotate +90+250 (a) coyote_occupancy_plot.tiff figure_3_1.tiff
+
+# Step 2. add a (b) to figure 2
+convert -font arial -pointsize 175 -fill black -annotate +90+250 (b) coyote_mange_plot.tiff figure_3_2.tiff
+
+# Step 3. append them
+convert -append figure_3_1.tiff figure_3_2.tiff figure_3_Murray_et_al.tiff
