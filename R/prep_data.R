@@ -159,7 +159,15 @@ urb_mat <- urb_mat[order(urb_mat$site),]
 # merge with y_det
 y_det <- left_join(y_det, urb_mat, by = c('station' = 'site'))
 
+# come up with a vector of the preceeding seasons. 
 
+last_sample_vec <- rep(0, nrow(y_det))
+unq_si <- unique(y_det$station)
+for(i in 1:length(unq_si)){
+  si_locs <- which(y_det$station == unq_si[i])
+  last_sample_vec[si_locs[-1]] <- si_locs[-length(si_locs)]
+}
+y_det$last_sample_vec <- last_sample_vec
 temps <- data.frame(season = levels(y_det$season),
                     temp = c(    47, 70, 48, 
                                  18, 42, 72, 47,
@@ -186,7 +194,7 @@ ncov_rho <- ncol(rho_covs)
 ncov_omega <- ncol(omega_covs)
 ncov_gamma <- ncol(gamma_covs)
 nseason <- max(y_det$sampvec)
-
+nfirst_season <- length(unique(y_det$station))
 z_start <- y_det$y
 z_start[z_start>1] <- 1
 z_start[is.na(z_start)] <- 1
@@ -213,6 +221,8 @@ inits <- function(chain){
       tau_psi = rgamma(1,1,1),
       tau_rho = rgamma(1,1,1),
       tau_omega = rgamma(1,1,1),
+      theta_psi = rnorm(1),
+      theta_omega = rnorm(1),
       .RNG.name = switch(chain,
                          "1" = "base::Wichmann-Hill",
                          "2" = "base::Marsaglia-Multicarry",
@@ -342,10 +352,12 @@ data_list <- list( y = y_det$y,
                    ncov_omega = ncov_omega,
                    ncov_gamma = ncov_gamma,
                    nseason = nseason,
+                   nfirst_season = nfirst_season,
                    st = season_tracker,
                    nsite = nrow(y_det),
                    nphoto = nrow(coy),
                    sample_vec = y_det$sampvec,
+                   last_sample_vec = y_det$last_sample_vec,
                    site_vec = coy$sitevec)
 
 
@@ -359,4 +371,5 @@ rm(gamma_covs)
 rm(omega_covs)
 rm(psi_covs)
 rm(rho_covs)
+rm(last_sample_vec)
 #rm(urb)
