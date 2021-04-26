@@ -11,7 +11,7 @@ This repository contains seven folders. In alphabetical order they are:
 
 <div align="center"><img width="150" height="auto" align="center" src="./assets/coyote.png" alt="A line drawing of a coyote." /></div>
 
-<div align="center"> <h3>./assets</h3> </div>
+<div align="center"> <h3>./assets/</h3> </div>
 
 ---
 
@@ -25,7 +25,7 @@ Contains two images used to make `README.md`. This includes:
 
 <div align="center"><img width="150" height="auto" src="./assets/coyote_mange.png" alt="A line drawing of a coyote with mange." /></div>
 
-<div align="center"> <h3>./data</h3> </div>
+<div align="center"> <h3>./data/</h3> </div>
 
 ---
 
@@ -103,7 +103,7 @@ urbanization metrics via Principal Components Analysis. This csv has 113 rows an
 
 <div align="center"><img width="150" height="auto" align="center" src="./assets/coyote.png" alt="A line drawing of a coyote." /></div>
 
-<div align="center"> <h3>./im_calls</h3> </div>
+<div align="center"> <h3>./im_calls/</h3> </div>
 
 ---
 
@@ -114,7 +114,7 @@ This folder just contains one script, titled `figure_3_calls.txt`. I used imagem
 
 <div align="center"><img width="150" height="auto" src="./assets/coyote_mange.png" alt="A line drawing of a coyote with mange." /></div>
 
-<div align="center"> <h3>./jags_script</h3> </div>
+<div align="center"> <h3>./jags_script/</h3> </div>
 
 ---
 
@@ -130,7 +130,7 @@ This folder contains three JAGS scripts, all of which are different parameteriza
 
 <div align="center"><img width="150" height="auto" align="center" src="./assets/coyote.png" alt="A line drawing of a coyote." /></div>
 
-<div align="center"> <h3>./plots</h3> </div>
+<div align="center"> <h3>./plots/</h3> </div>
 
 ---
 Contains plots 3, 4, and 5 of the manuscript, as well as the model evaluation plots for the supplemental material (within it's own subfolder).
@@ -139,7 +139,7 @@ Contains plots 3, 4, and 5 of the manuscript, as well as the model evaluation pl
 
 <div align="center"><img width="150" height="auto" src="./assets/coyote_mange.png" alt="A line drawing of a coyote with mange." /></div>
 
-<div align="center"> <h3>./python</h3> </div>
+<div align="center"> <h3>./python/</h3> </div>
 
 ---
 
@@ -149,7 +149,7 @@ Contains a single script, `blur_detection.py`, which is what we used to calculat
 
 <div align="center"><img width="150" height="auto" align="center" src="./assets/coyote.png" alt="A line drawing of a coyote." /></div>
 
-<div align="center"> <h3>./R</h3> </div>
+<div align="center"> <h3>./R/</h3> </div>
 
 ---
 
@@ -173,7 +173,7 @@ Contains the seven R scripts for this analysis.  If you were to run them in orde
 
 <div align="center"><img width="150" height="auto" src="./assets/coyote_mange.png" alt="A line drawing of a coyote with mange." /></div>
 
-<div align="center"> <h3>./results</h3> </div>
+<div align="center"> <h3>./results/</h3> </div>
 
 ---
 
