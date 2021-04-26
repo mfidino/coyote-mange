@@ -59,4 +59,3 @@ This folder contains the data to fit the model and a set of gridpoints as a shap
 | SurveyID      | categorical | The survey code for the detection / non-detection data. Can be joined to the `surveyid` column in `coydata_merged_sites.csv`                                                                                                                   |
 | IDWeek        | categorical | Just a combination of the StationID and the Date                                                                                                                                                                                               |
 | Coyote        | Integer     | Can take three values. `NA` if a camera was not active, `0` if the camera was active and coyote were not detected, and `1` if the camera was active and coyote were detected.                                                                  |
-
