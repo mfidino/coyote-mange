@@ -1,4 +1,4 @@
-<a href="https://zenodo.org/badge/latestdoi/185264717"><img src="https://zenodo.org/badge/185264717.svg" alt="DOI"></a>
+[![DOI](https://zenodo.org/badge/185264717.svg)](https://zenodo.org/badge/latestdoi/185264717)
 
 
 
