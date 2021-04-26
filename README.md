@@ -23,7 +23,7 @@ Contains two images used to make `README.md`. This includes:
 
 ---
 
-<div align="center"><img width="150" height="auto" src="./images/raccoon.JPG" alt="A silhouette of a raccoon." /></div>
+<div align="center"><img width="150" height="auto" src="./assets/coyote_mange.png" alt="A line drawing of a coyote with mange." /></div>
 
 <div align="center"> <h3>./data</h3> </div>
 
