@@ -14,28 +14,33 @@ source("./R/prep_data.R")
 
 # read in the mange model output
 pars <- readRDS(
-  "./results/coyote_mcmc_moredata.RDS"
+  "./results/coyote_mcmc_autologistic.RDS"
 )
 
 # make it into a matrix
 pars <- as.matrix(
-  as.mcmc.list(pars),
-  chains = TRUE
-)[,-1]
+  as.mcmc.list(pars)
+)
 
 # remove sites with no data
-psi_cov <- data_list$psi_cov[-which(data_list$J == 0),]
-rho_cov <- data_list$rho_cov[-which(data_list$J == 0),]
+psi_cov <- data_list$psi_cov#[-which(data_list$J == 0),]
+rho_cov <- data_list$rho_cov#[-which(data_list$J == 0),]
 ome_cov <- data_list$omega_cov
-gam_cov <- data_list$gamma_cov[data_list$site_vec,]
-y <- data_list$y[-which(data_list$J == 0)]
+gam_cov <- data_list$gamma_cov#[data_list$site_vec,]
+y <- data_list$y#[-which(data_list$J == 0)]
 q <- data_list$q
-sample_vec <- data_list$sample_vec[-which(data_list$J == 0)]
+sample_vec <- data_list$sample_vec#[-which(data_list$J == 0)]
+last_sample_vec <- data_list$last_sample_vec#[-which(data_list$J == 0)]
 j <- data_list$J[-which(data_list$J == 0)]
 site_vec <- data_list$site_vec
 
-to_go <- which(data_list$J == 0)
+theta_psi <- as.numeric(y>0)
+theta_psi[1:sum(sample_vec == 1)] <- 0
 
+# we can only evaluate on data that we observed, I use this object a 
+#  bunch to drop out some of the rows from the data in the preceeding
+#  rows.
+to_go <- which(data_list$J == 0)
 
 # get the random effects and the sd term
 pars_ranef <- pars[,grep("ranef", colnames(pars))]
@@ -52,19 +57,69 @@ state <- function(x,y){
 # inverse logit!
 ilogit <- function(x) exp(x) / (1 + exp(x))
 
-# simulate a dataset!
-psims <- sample(1:nrow(pars), 5000)
+set.seed(567)
 
-# First linear predictor. psi
-psi_lpred <-   state(pars, "psi")[psims,] %*% t(psi_cov) + 
-  state(pars_ranef, "psi")[psims,][,sample_vec]
+nsamps <- 5000
+psims <- sample(1:nrow(pars), nsamps)
 
-psi_pred <- ilogit(psi_lpred)
+# we need to generate these by season because of the auto-logistic term in the
+#  model. So this list stores the log odds of occupancy.
+psi_lpred <- vector("list", data_list$nseason)
+my_z <- vector("list", data_list$nseason)
+ 
+# do first season, which does not depend on the previous state. This tmp
+#  vector will index the first season of data.
+tmp <- which(data_list$sample_vec == 1)
+ psi_lpred[[1]] <-    state(pars, "psi")[psims,1:4] %*% t(psi_cov[tmp,]) +
+    state(pars_ranef, "psi")[psims,][,sample_vec[tmp]]
+ # convert to probability
+psi_fs <- ilogit(psi_lpred[[1]])
+ # and generate a posterior estimate of occupancy
+my_z[[1]] <- matrix(
+  rbinom(prod(dim(psi_lpred[[1]])), 1, psi_fs),
+  ncol = data_list$nfirst_season,
+  nrow = nsamps
+)
+# but if we actually detected the species we know it's there
+my_z[[1]][,which(y[tmp] >0)] <- 1
+# follow suit for the rest of the seasons
+for(i in 2:data_list$nseason){
+  tmp <- which(sample_vec == i)
+  psi_lpred[[i]] <-    state(pars, "psi")[psims,1:4] %*% t(psi_cov[tmp,]) +
+    state(pars_ranef, "psi")[psims,][,sample_vec[tmp]]
+  # this adds the auto-logistic term to the linear predictor if
+  #  a species was present during the previous timestep
+  lz <- sweep(my_z[[i-1]], 1, state(pars, "theta")[psims,1], "*")
+  psi_lpred[[i]] <- psi_lpred[[i]] + lz
+  psi_fs <- ilogit(psi_lpred[[i]])
+  my_z[[i]] <- matrix(
+    rbinom(prod(dim(psi_lpred[[i]])), 1, psi_fs),
+    ncol = data_list$nfirst_season, nrow = nsamps)
+  # if it's there it is there
+  my_z[[i]][,which(y[tmp] >0)] <- 1
+}
+
+# now store ALL of it in one big matrix
+logit_psi <- matrix(NA, ncol = data_list$nsite, nrow = nsamps)
+for(i in 1:data_list$nseason){
+  logit_psi[,sample_vec == i] <- psi_lpred[[i]]
+}
+
+# drop data we did not observe
+logit_psi <- logit_psi[,-to_go]
+
+# convert to a probability
+psi_pred <- ilogit(logit_psi)
 rm(psi_lpred)
-# Second linear predictor. rho
+# Second linear predictor. rho. Much easier to calculate
+#  given there is no autologistic term
 rho_lpred <- state(pars, "rho")[psims,] %*% t(rho_cov) +
   state(pars_ranef, "rho")[psims,][sample_vec]
 
+# same thing, drop data we did not observe
+rho_lpred <- rho_lpred[,-to_go]
+
+# convert to a probability
 rho_pred <- ilogit(rho_lpred)
 rm(rho_lpred)
 
@@ -91,6 +146,8 @@ z_pred <- matrix(
   nrow = nrow(psi_pred)
 )
 
+# clean up y now so it's only for the data we have observed.
+y <- y[-to_go]
 # Make it a 1 if we detected it, because we know coyote are there.
 z_pred[,which(y>0)] <- 1
 
@@ -173,7 +230,7 @@ occ_binned_df <- function(z_mat, psi_mat, cov_vec){
 psi_urb1 <- occ_binned_df(
   z_pred,
   psi_pred,
-  psi_cov[,2]
+  psi_cov[-to_go,2]
 )
 
 jpeg("./plots/model_evaluation/psi_urb1_residual.jpg")
@@ -189,7 +246,7 @@ for(i in 1:max(psi_urb1$sim)){
 
 dev.off()
 
-psi_urb2 <- occ_binned_df(z_pred, psi_pred, psi_cov[,3])
+psi_urb2 <- occ_binned_df(z_pred, psi_pred, psi_cov[-to_go,3])
 
 jpeg("./plots/model_evaluation/psi_urb2_residual.jpg")
 plot(1 ~ 1, pch = 19, col = scales::alpha("black", 0.005),
@@ -203,7 +260,7 @@ abline(h = 0, lwd = 2, lty = 2, col = "gray80")
 #}
 dev.off()
 
-psi_urb3 <- occ_binned_df(z_pred, psi_pred, psi_cov[,4])
+psi_urb3 <- occ_binned_df(z_pred, psi_pred, psi_cov[-to_go,4])
 jpeg("./plots/model_evaluation/psi_urb1x2_residual.jpg")
 plot(1 ~ 1, pch = 19, col = scales::alpha("black", 0.005),
      ylim = c(-0.35, 0.35), xlim = range(psi_urb3$xvals), bty = 'l',
@@ -304,7 +361,7 @@ for(i in 1:length(rho_temp)){
     y,
     rho_pred,
     z_pred,
-    rho_cov[,2],
+    rho_cov[-to_go,2],
     iter = i,
     j = j
   )
@@ -334,88 +391,91 @@ dev.off()
 #  therefore have no images of them). Additionally, our indexing of
 #  q is going to be easiest if we do this for all of the data 
 #  and then subset at the end, which means we need to recalculate
-#  all of the predictions from before
+#  all of the predictions from before.
 
+z_pred <- matrix(NA, nrow = nsamps, ncol = data_list$nsite)
+
+for(i in 1:length(my_z)){
+  tmp <- which(sample_vec == i)
+  z_pred[,tmp] <- my_z[[i]]
+}
+
+# just recreating this object as a reminder of what needs to be removed
+#  (i.e., times when we did not sample)
 to_go <- which(data_list$J == 0)
 
 
-# this function will grab parameters from the specific linear
-#  predictor we are interested in
-state <- function(x,y){
-  x[,grep(y, colnames(x))]
-}
-# inverse logit!
-ilogit <- function(x) exp(x) / (1 + exp(x))
 
-# simulate a dataset!
-
-# First linear predictor. psi
-psi_lpred <-   state(pars, "psi")[psims,] %*% t(data_list$psi_cov) + 
-  state(pars_ranef, "psi")[psims,][,data_list$sample_vec]
-
-psi_pred <- ilogit(psi_lpred)
-rm(psi_lpred)
-# Second linear predictor. rho
-rho_lpred <- state(pars, "rho")[psims,] %*% t(data_list$rho_cov) +
-  state(pars_ranef, "rho")[psims,][data_list$sample_vec]
-
-rho_pred <- ilogit(rho_lpred)
-rm(rho_lpred)
-
-# generate z given psi, following wright et al. 2019
-
-# This is the proability a species was not detected over the
-#  entire survey. 
-p_notdetected <- sweep(1 - rho_pred, 2, data_list$J, FUN = "^")
+# simulate a dataset! We need my_z for this, as detecting mange is 
+#  conditional on coyote being present.
 
 
-# the probability that z = 1 given the species is not detected
-z_prob <- (psi_pred * p_notdetected) / 
-  ((1 - psi_pred) + (psi_pred * p_notdetected)) 
 
-# estimate whether species is there
-z_pred <- matrix(
-  rbinom(
-    prod(
-      dim(psi_pred)
-    ),
-    1,
-    z_prob
-  ),
-  ncol = ncol(psi_pred),
-  nrow = nrow(psi_pred)
+ome_lpred <- vector("list", length = data_list$nseason)
+my_x <- vector("list", length = data_list$nseason)
+
+tmp <- which(data_list$sample_vec == 1)
+ome_lpred[[1]] <-    state(pars, "ome")[psims,1:4] %*% t(ome_cov[tmp,]) +
+  state(pars_ranef, "ome")[psims,][,sample_vec[tmp]]
+# convert to probability
+ome_fs <- ilogit(ome_lpred[[1]])
+# multiply by presence of coyote
+ome_fs <- ome_fs * my_z[[1]]
+# and generate a posterior estimate of occupancy
+my_x[[1]] <- matrix(
+  rbinom(prod(dim(ome_lpred[[1]])), 1, ome_fs),
+  ncol = data_list$nfirst_season,
+  nrow = nsamps
 )
+# but if we actually detected the species we know it's there
 
-# Make it a 1 if we detected it, because we know coyote are there.
-z_pred[,which(data_list$y>0)] <- 1
+my_x[[1]][,which(x_guess[tmp] == 1)] <- 1
+# follow suit for the rest of the seasons
+for(i in 2:data_list$nseason){
+  tmp <- which(sample_vec == i)
+  ome_lpred[[i]] <-    state(pars, "ome")[psims,1:4] %*% t(ome_cov[tmp,]) +
+    state(pars_ranef, "ome")[psims,][,sample_vec[tmp]]
+  # this adds the auto-logistic term to the linear predictor if
+  #  a species was present during the previous timestep
+  lx <- sweep(my_x[[i-1]], 1, state(pars, "theta")[psims,2], "*")
+  ome_lpred[[i]] <- ome_lpred[[i]] + lx
+  ome_fs <- ilogit(ome_lpred[[i]])
+  ome_lpred[[i]] <- ome_lpred[[i]] * my_z[[i]]
+  my_x[[i]] <- matrix(
+    rbinom(prod(dim(ome_lpred[[i]])), 1, psi_fs),
+    ncol = data_list$nfirst_season, nrow = nsamps)
+  my_x[[i]][,which(x_guess[tmp] == i)] <- 1
+}
 
-# make z_pred NA if we did not sample
-z_pred[,which(data_list$J == 0)] <- NA
+# now store ALL of it in one big matrix
+logit_ome <- matrix(NA, ncol = data_list$nsite, nrow = nsamps)
+for(i in 1:data_list$nseason){
+  logit_ome[,sample_vec == i] <- ome_lpred[[i]]
+}
 
 
-# Third linear predictor. omega (ome)
-ome_lpred <-   state(pars, "ome")[psims,] %*% t(data_list$omega_cov) + 
-  state(pars_ranef, "ome")[psims,][,data_list$sample_vec]
-
-ome_pred <- ilogit(ome_lpred)
-rm(ome_lpred)
-# Fourth linear predictor. rho
+# convert it to a probability
+ome_pred <- ilogit(logit_ome)
+#rm(ome_lpred)
+# Fourth linear predictor. rho. Again, easier without the auto-logistic term.
 gam_lpred <- state(pars, "gam")[psims,] %*% t(data_list$gamma_cov)
 
 gam_pred <- ilogit(gam_lpred)
 rm(gam_lpred)
 
 
+# generate z given psi, following wright et al. 2019
+
+
 
 # generate x given z, following wright et al. 2019. This is a bit trickier
-#  as there are actually three seperate probabilities that we need to
+#  as there are actually two seperate probabilities that we need to
 #  calculate.
 
 # 1. If we observed mange then give x_pred a 1.
 # 2. If we have images but did not observe mange, then the use the
 #      probability that we did not detect mange in the images.
-# 3. If we do not have images, then we use the probability that
-#      we did not detect coyote.
+
 
 # calculate 2. 
 

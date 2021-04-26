@@ -157,10 +157,27 @@ coy_occ <- cbind(
   urbPCA1x2
 ) %*% base_results[1:4,2] 
 
+coy_theta <- cbind(
+  1,
+  urbPCA1,
+  urbPCA2,
+  urbPCA1x2
+) %*% c(sum(base_results[c(1,5),2]), base_results[2:4,2])
+  
+ 
+
 # convert to probability
 coy_occ <- plogis(
-  coy_occ
+  coy_occ 
 )
+
+coy_theta <- plogis(
+  coy_theta
+)
+
+# occupancy at equilibrium
+
+coy_occ <- coy_occ / (coy_occ + (1 - coy_theta))
 
 # add this to the raster
 my_raster$coyote_occupancy <- coy_occ
@@ -171,9 +188,25 @@ coy_man <- cbind(
   urbPCA1,
   urbPCA2,
   urbPCA1x2
-) %*% base_results[7:10,2] 
+) %*% base_results[8:11,2] 
 
-coy_man <- plogis(coy_man)
+man_theta <- cbind(
+  1,
+  urbPCA1,
+  urbPCA2,
+  urbPCA1x2
+) %*% c(sum(base_results[c(8,12),2]), base_results[9:11,2]) 
+
+coy_man <- plogis(
+  coy_man
+  )
+
+man_theta <- plogis(
+  man_theta
+)
+
+# mange at equilibrium
+coy_man <- coy_man / (coy_man + (1 - man_theta))
 
 my_raster$coyote_w_mange <- coy_occ * coy_man
 
@@ -259,12 +292,12 @@ streams <- st_transform(
   crs = utm_crs
 )
 
-steams <- st_intersection(
+streams <- st_intersection(
   streams,
   county_crop
 )
 
-tiff("coyote_occupancy.tiff", width = 5, height = 5,
+tiff("./plots/coyote_occupancy.tiff", width = 5, height = 5,
      units = "in", res = 600, compression = "lzw")
 plot(
   my_raster["coyote_occupancy"],
@@ -273,7 +306,8 @@ plot(
   cex = 0.5,
   main = NULL,
   key.pos = NULL,
-  pal = sf.colors(10, alpha = 0.8)
+  pal = sf.colors(10, alpha = 0.8),
+  breaks = seq(0,1,0.1)
 
 )
 
@@ -307,16 +341,18 @@ dev.off()
 
 # just to get the scale bar (putting it all together
 #  in inkscape).
-svg("./plots/coyote_occupancy_with_scale.svg", width = 5, height = 5)
-plot(
-  my_raster["coyote_occupancy"],
-  pch = 15,
-  reset = FALSE,
-  cex = 0.5,
-  main = NULL,
-  bty = "n"
-)
-dev.off()
+# svg("./plots/coyote_occupancy_with_scale.svg", width = 5, height = 5)
+# plot(
+#   my_raster["coyote_occupancy"],
+#   pch = 15,
+#   reset = FALSE,
+#   cex = 0.5,
+#   main = NULL,
+#   bty = "n",
+#   pal = sf.colors(10, alpha = 0.8),
+#   breaks = seq(0,1,0.1)
+# )
+# dev.off()
 
 tiff("./plots/coyote_mange.tiff", width = 5, height = 5,
      units = "in", res = 600, compression = "lzw")
@@ -330,8 +366,10 @@ plot(
   cex = 0.5,
   main = NULL,
   key.pos = NULL,
+  pal = sf.colors(10, alpha = 0.8),
   breaks = seq(0,1,0.1)
 )
+
 # add the stream layer
 plot(
   st_geometry(streams),
@@ -359,3 +397,4 @@ points(
   cex = coy_mange$cex
 )
 dev.off()
+

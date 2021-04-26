@@ -3,36 +3,51 @@ library(coda)
 
 source("./R/prep_data.R")
 
-mout <- readRDS("./results/coyote_mcmc_moredata.RDS")
+mout <- readRDS("./results/coyote_mcmc_autologistic.RDS")
 mout <- as.mcmc.list(mout)
 
 ans <- summary(mout)
 
 base_results <- ans$quantiles[,c(1,3,5)]
+base_results <- round(base_results, 2)
+
+# move auto-regressive terms up
+base_results <- rbind(
+  base_results[1:4,],
+  base_results[66,],
+  base_results[5:10,],
+  base_results[67,],
+  base_results[11:65,],
+  base_results[68:nrow(base_results),]
+)
 
 pinfo <- c("psi - intercept",
            "psi - urb 1",
            "psi - urb 2",
            "psi - urb 1x2",
+           "psi - AR(1)",
            "rho - intercept",
            "rho - temperature",
            "omega - intercept",
            "omega - urb 1",
            "omega - urb 2",
            "omega - urb 1x2",
+           "omega - AR(1)",
            "gamma - intercept",
            "gamma - blur",
            "gamma - in color",
-           "gamma - proportion body visible")
+           "gamma - proportion body visible"
+           )
 
-row.names(base_results)[1:14] <- pinfo
+row.names(base_results)[1:16] <- pinfo
+
 
 # determine if the sign of the median and 95% quantiles are
 #  the same (i.e., do not overlap zero).
 sig_at_95 <- which(
   rowSums(
     sign(
-      base_results[1:14,]
+      base_results[1:16,]
     )
   ) %in% c(3, -3)
 )
@@ -43,7 +58,7 @@ base_results <- cbind(
 )
 
 base_results[sig_at_95,4] <- 1
-colnames(base_results)[4] <- "Significant"    
+colnames(base_results)[4] <- "95BCI_excludes_zero"    
 
 write.csv(
   base_results,
@@ -75,9 +90,13 @@ X <- as.matrix(
 
 # get just the psi and omega results
 psi <- base_results[1:4,2]
-ome <- base_results[7:10, 2]
-pp <- plogis(X %*% psi)
-oo <- plogis(X %*% ome)
+psi_theta <- sum(base_results[c(1,5), 2])
+ome <- base_results[8:11, 2]
+ome_theta <- sum(base_results[c(8,12),2])
+pp <- plogis(X %*% psi) / (plogis(X %*% psi) + (1 - plogis(X %*% psi + psi_theta)))
+oo <- plogis(X %*% ome) / (plogis(X %*% ome) + (1 - plogis(X %*% ome + ome_theta)))
+
+
 
 df <- cbind(X, pp)
 dfo <- cbind(X, oo)
@@ -258,7 +277,7 @@ legend(
   pch = c(24,21), 
   legend = c('with mange', 'without mange'),
   title = 'Coyote detected...',
-  pt.cex = 1.2, cex = 1.1
+  pt.cex = 1.2, cex = 1.1, y.intersp = 1.5
 )
 }
 dev.off()

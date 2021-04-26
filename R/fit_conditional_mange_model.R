@@ -42,7 +42,7 @@ m2 <- as.mcmc.list(mout)
 saveRDS(mout, "./results/coyote_mcmc_autologistic.RDS")
 ans <- summary(mout)
 str(ans)
-
+round(ans, 2)
 
 diagMCMC = function( codaObject , parName=varnames(codaObject)[1] ,
                      saveName=NULL , saveType="jpg" ) {
