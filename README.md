@@ -111,7 +111,7 @@ urbanization metrics via Principal Components Analysis. This csv has 113 rows an
 
 ---
 
-This folder just contains one script, titled `figure_3_calls.txt`. I used imagemagick to combine the two subplots for figure 2 and add in the a) and b) symbols. These are just the notes I took in a text file so I could remember what to call from the console.
+This folder just contains one script, titled `figure_3_calls.txt`. I used imagemagick to combine the two subplots for figure 3 and add in the a) and b) symbols. These are just the notes I took in a text file so I could remember what to call from the console.
 
 
 ---
