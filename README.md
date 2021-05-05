@@ -5,7 +5,7 @@
 A repository for:
 ================
 
-Murray et al. (*in press*). A multi-state occupancy model to non-invasively monitor visible signs of wildlife health with camera traps that accounts for image quality. Journal of Animal Ecology.
+Murray et al. (2021). A multi-state occupancy model to non-invasively monitor visible signs of wildlife health with camera traps that accounts for image quality. Journal of Animal Ecology.
 
 ---
 
